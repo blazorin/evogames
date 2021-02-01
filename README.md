@@ -1,5 +1,5 @@
 # evogames
-[EVO.Games](https://evo.games) A Crypto Casino Proyect
+[EVO.Games](https://evo.games) A Crypto Gambling Project
 
 [Developer site](https://dev.evo.games)
 
