@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Model.Data;
+using Model.Extensions;
 
 namespace Server
 {
@@ -21,11 +23,18 @@ namespace Server
         {
             services.AddControllersWithViews();
             services.AddRazorPages();
+
+            services.AddEvoGamesModelServices();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
+            using (var db = new EvoGamesContext())
+            {
+                db.Database.EnsureCreated();
+            }
+
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();

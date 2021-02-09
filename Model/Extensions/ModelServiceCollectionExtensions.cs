@@ -1,4 +1,7 @@
+using AutoMapper;
 using Microsoft.Extensions.DependencyInjection;
+using Model.Data;
+using Model.Mapping;
 
 namespace Model.Extensions
 {
@@ -11,8 +14,9 @@ namespace Model.Extensions
         /// <returns></returns>
         public static IServiceCollection AddEvoGamesModelServices(this IServiceCollection services)
         {
-            //services.AddDbContext<BlazorStoreContext>();
-            //services.AddAutoMapper(typeof(MappingProfile).Assembly);
+            // Essential
+            services.AddDbContext<EvoGamesContext>();
+            services.AddAutoMapper(typeof(MappingProfile).Assembly);
             return services;
         }
     }
