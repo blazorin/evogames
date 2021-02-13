@@ -32,7 +32,7 @@ namespace Model.Data
         public float UnconfirmedDeposits { get; set; }
         public float UnconfirmedWithdraws { get; set; }
 
-        public List<Claim> Claims { get; set; }
+        public List<UserPerms> Perms { get; set; }
         public bool IsAdmin { get; set; }
 
         public List<UserLog> Logs { get; set; }
