@@ -17,5 +17,12 @@ namespace Model.Data
                 opt => opt.MigrationsAssembly(Assembly.GetExecutingAssembly().FullName));
             base.OnConfiguring(builder);
         }
+
+        protected override void OnModelCreating(ModelBuilder model)
+        {
+            model.Entity<User>().HasIndex(u => u.Email).IsUnique(true);
+            model.Entity<Bet>().HasIndex(b => b.Date).IsUnique(false);
+            model.Entity<Transaction>().HasIndex(t => t.Date).IsUnique(false);
+        }
     }
 }
