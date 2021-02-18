@@ -33,6 +33,9 @@ namespace Model.Data
         public float UnconfirmedWithdraws { get; set; }
 
         public List<UserPerms> Perms { get; set; }
+        public List<string> EnabledTokens { get; set; }
+        public List<string> DisabledTokens { get; set; }
+
         public bool IsAdmin { get; set; }
 
         public List<UserLog> Logs { get; set; }

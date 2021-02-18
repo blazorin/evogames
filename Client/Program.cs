@@ -3,6 +3,8 @@ using System.Net.Http;
 using System.Globalization;
 using System.Threading.Tasks;
 using Client.Extensions;
+using Client.Extensions.Authentication;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -19,6 +21,10 @@ namespace Client
                 sp => new HttpClient {BaseAddress = new Uri(builder.HostEnvironment.BaseAddress)});
 
             builder.Services.AddEvoGamesClientServices();
+
+            // Authentication and Authorization
+            builder.Services.AddAuthorizationCore();
+            builder.Services.AddOptions();
 
             // I18N
             CultureInfo.DefaultThreadCurrentCulture =
