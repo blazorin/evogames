@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
@@ -7,11 +8,14 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Model.Data;
 using Model.Extensions;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Server
 {
     public class Startup
     {
+        public const string JwtSecretKey = "71c51d71df6a1b9c93bab5da5e89d183258defaa401551635195247847c16c28";
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
@@ -27,6 +31,20 @@ namespace Server
             services.AddRazorPages();
 
             services.AddEvoGamesModelServices();
+
+            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, jwtBearerOptions =>
+                {
+                    jwtBearerOptions.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        IssuerSigningKey = new SymmetricSecurityKey(
+                            Encoding.UTF8.GetBytes(JwtSecretKey)
+                        ),
+                        RequireExpirationTime = false,
+                        ValidateAudience = false,
+                        ValidateIssuer = false,
+                    };
+                });
         }
 
 
@@ -55,6 +73,8 @@ namespace Server
             app.UseStaticFiles();
 
             app.UseRouting();
+            app.UseAuthentication();
+            app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
             {
