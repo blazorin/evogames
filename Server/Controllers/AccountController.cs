@@ -14,7 +14,7 @@ namespace Server.Controllers
     [Route("account")]
     public class AccountController : ControllerBase
     {
-        private string GenerateToken(User user, IEnumerable<string> roles)
+        private string GenerateToken(User user, IEnumerable<string> roles, IEnumerable<Claim> policies)
         {
             var header = new JwtHeader(
                 new SigningCredentials(
@@ -30,6 +30,7 @@ namespace Server.Controllers
                 new(JwtRegisteredClaimNames.UniqueName, user.UserId)
             };
             claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
+            claims.AddRange(policies);
 
             var payload = new JwtPayload(
                 issuer: "EvoGamesServer",
