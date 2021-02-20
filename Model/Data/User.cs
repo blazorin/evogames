@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using JetBrains.Annotations;
+using Shared.Enums;
 using Shared.Utils;
 
 namespace Model.Data
@@ -26,6 +27,8 @@ namespace Model.Data
 
         [Required, StringLength(FieldLenghts.User.Country), MinLength(2)]
         public string Country { get; set; }
+
+        public Language Language { get; set; }
 
         public decimal Balance { get; set; }
 

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Shared.Enums;
 
 namespace Shared
 {
@@ -6,6 +7,7 @@ namespace Shared
     {
         public string Username { get; set; }
         public IEnumerable<string> Roles { get; set; }
-        public Token Token { get; set; }
+        public string Token { get; set; }
+        public Language Language { get; set; }
     }
 }

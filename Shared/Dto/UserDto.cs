@@ -1,4 +1,5 @@
 using System;
+using Shared.Enums;
 
 namespace Shared.Dto
 {
@@ -8,5 +9,6 @@ namespace Shared.Dto
         public bool IsAdmin { get; set; }
         public decimal Balance { get; set; }
         public DateTime CreationDate { get; set; }
+        public Language Language { get; set; }
     }
 }

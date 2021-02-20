@@ -16,6 +16,7 @@ namespace Server
     public class Startup
     {
         public const string JwtSecretKey = "71c51d71df6a1b9c93bab5da5e89d183258defaa401551635195247847c16c28";
+
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
@@ -27,7 +28,7 @@ namespace Server
         // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddControllersWithViews();
+            services.AddControllers();
             services.AddRazorPages();
 
             services.AddEvoGamesModelServices();
@@ -40,9 +41,9 @@ namespace Server
                         IssuerSigningKey = new SymmetricSecurityKey(
                             Encoding.UTF8.GetBytes(JwtSecretKey)
                         ),
-                        RequireExpirationTime = false,
-                        ValidateAudience = false,
-                        ValidateIssuer = false,
+                        RequireExpirationTime = true,
+                        ValidIssuer = "EvoGamesServer",
+                        ValidAudience = "EvoGamesClient"
                     };
                 });
         }
