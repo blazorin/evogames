@@ -26,7 +26,7 @@ namespace Client.Extensions.Authentication
         {
             return Task.FromResult(new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity())));
         }
-
+        
         public async Task SetCurrentUserAsync(UserData userData)
         {
             var claims = new List<Claim>
