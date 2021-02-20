@@ -39,7 +39,11 @@ namespace Model.Data
         public List<string> EnabledTokens { get; set; }
         public List<string> DisabledTokens { get; set; }
 
+        public bool IsOwner { get; set; }
+        public bool IsDeveloper { get; set; }
         public bool IsAdmin { get; set; }
+        public bool IsModerator { get; set; }
+
 
         public List<UserLog> Logs { get; set; }
         public List<Transaction> Transactions { get; set; }
