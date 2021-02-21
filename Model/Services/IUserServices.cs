@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using Model.Data;
 using Shared;
 using Shared.Dto;
 
@@ -6,6 +7,6 @@ namespace Model.Services
 {
     public interface IUserServices
     {
-        Task<UserDto> GetUserByAuthenticationAsync(UserCredentials credentials);
+        Task<User> GetUserByAuthenticationAsync(UserCredentials credentials);
     }
 }
