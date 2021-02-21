@@ -9,6 +9,8 @@ namespace Shared.Dto
 
         public Games Game { get; set; }
         public decimal Amount { get; set; }
+        public decimal AmountAfterBet { get; set; }
+        
         public DateTime Date { get; set; }
         public BetStatus Status { get; set; }
     }

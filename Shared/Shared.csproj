@@ -12,7 +12,7 @@
 
     <ItemGroup>
       <Folder Include="Extensions\DataAnnotations" />
-      <Folder Include="Interfaces" />
+      <Folder Include="Services" />
     </ItemGroup>
 
 

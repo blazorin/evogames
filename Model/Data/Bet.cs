@@ -12,10 +12,14 @@ namespace Model.Data
 
         [Required] public decimal Amount { get; set; }
 
+        // TODO: Comprobar que cuando es 0, no salta el error de RequiredAttribute (DataAnnotations)
+
+        [Required] public decimal AmountAfterBet { get; set; }
+
         [Required] public DateTime Date { get; set; }
 
         [Required] public BetStatus Status { get; set; }
-        
+
         public string RejectedReason { get; set; }
 
         public string UserId { get; set; }

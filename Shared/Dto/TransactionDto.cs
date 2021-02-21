@@ -1,3 +1,4 @@
+using System;
 using Shared.Enums;
 
 namespace Shared.Dto
@@ -8,5 +9,6 @@ namespace Shared.Dto
         public TransactionType TransactionType { get; set; }
         public CoinType CoinType { get; set; }
         public decimal Amount { get; set; }
+        public DateTime Date { get; set; }
     }
 }
