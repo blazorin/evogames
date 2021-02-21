@@ -12,12 +12,14 @@ namespace Model.Mapping
         public MappingProfile()
         {
             // User Mapping
-            CreateMap<User, UserProfileDto>();
             CreateMap<User, UserDto>();
             CreateMap<User, AdminUserDto>();
             CreateMap<NewUserDto, User>()
                 .ForMember(u => u.PasswordHashed, opt => opt.Ignore())
+                .ForMember(u => u.IsOwner, opt => opt.Ignore())
+                .ForMember(u => u.IsDeveloper, opt => opt.Ignore())
                 .ForMember(u => u.IsAdmin, opt => opt.Ignore())
+                .ForMember(u => u.IsModerator, opt => opt.Ignore())
                 .ForMember(u => u.UserId, opt => opt.Ignore());
 
             // Bet Mapping
