@@ -77,7 +77,7 @@ namespace Server.Controllers
             var claims = new List<Claim>
             {
                 new(ClaimTypes.Name, user.Name),
-                new(JwtRegisteredClaimNames.UniqueName, user.UserId)
+                new(ClaimTypes.NameIdentifier, user.UserId)
             };
             claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
             claims.AddRange(policies);
