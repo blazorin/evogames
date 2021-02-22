@@ -35,7 +35,7 @@ namespace Client.Extensions.Authentication
 
             var claims = new List<Claim>
             {
-                new Claim(ClaimTypes.Name, storedUser.Username)
+                new(ClaimTypes.Name, storedUser.Username)
             };
 
             claims.AddRange(storedUser.Roles.Select(role => new Claim(ClaimTypes.Role, role)));
@@ -54,7 +54,7 @@ namespace Client.Extensions.Authentication
         {
             var claims = new List<Claim>
             {
-                new Claim(ClaimTypes.Name, userData.Username)
+                new(ClaimTypes.Name, userData.Username)
             };
             claims.AddRange(userData.Roles.Select(role => new Claim(ClaimTypes.Role, role)));
             claims.AddRange(userData.Policies);
