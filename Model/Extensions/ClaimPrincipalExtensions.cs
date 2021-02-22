@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Security.Authentication;
 using System.Security.Claims;
@@ -8,20 +9,19 @@ namespace Model.Extensions
     {
         /// <summary>
         /// Obtener ID a través del ClaimsPrincipal del usuario
-        /// Puede ser obtenido a través de AuthenticationState
         /// </summary>
         /// <param name="principal"></param>
         /// <returns></returns>
         /// <exception cref="AuthenticationException"></exception>
-        public static int GetId(this ClaimsPrincipal principal)
+        public static string GetId(this ClaimsPrincipal principal)
         {
             var claim = principal.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
             if (claim == null)
                 throw new AuthenticationException($"Required {ClaimTypes.NameIdentifier} claims not found");
 
-            if (int.TryParse(claim.Value, out int id))
+            if (Guid.TryParse(claim.Value, out Guid id))
             {
-                return id;
+                return id.ToString();
             }
 
 
