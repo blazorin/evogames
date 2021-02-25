@@ -1,0 +1,75 @@
+@page "/login"
+
+@using Client.Extensions.Authentication
+@implements IDisposable
+@inject HttpClient HttpClient
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@attribute [AllowAnonymous]
+
+<h3>Login</h3>
+@if (submitError)
+{
+    <h3 class="alert-danger">An error ocurred while sending the request to server</h3>
+}
+
+<EditForm EditContext="_editContext" OnValidSubmit="HandleLogin">
+    <DataAnnotationsValidator/>
+
+    <InputText @bind-Value="_credentials.Email" DisplayName="Email"></InputText>
+    <ValidationMessage For="() => _credentials.Email"></ValidationMessage>
+
+    <InputText @bind-Value="_credentials.Password" DisplayName="Password"></InputText>
+    <ValidationMessage For="() => _credentials.Password"></ValidationMessage>
+
+    <button type="submit" class="btn btn-primary" disabled="@(!isValid || submitError || isLoading)">Send</button>
+</EditForm>
+
+@code {
+    private readonly UserCredentials _credentials = new();
+    private EditContext _editContext;
+    bool isValid;
+    bool submitError;
+    bool isLoading;
+
+    async Task HandleLogin()
+    {
+        isLoading = true;
+
+        var response = await HttpClient.PostAsJsonAsync("account/login", _credentials);
+        if (!response.IsSuccessStatusCode)
+        {
+            submitError = true;
+            return;
+        }
+        var userData = await response.Content.ReadFromJsonAsync<UserData>();
+        if (userData == null)
+        {
+            submitError = true;
+            return;
+        }
+        await ((CustomAuthenticationStateProvider) AuthenticationStateProvider).SetCurrentUserAsync(userData);
+
+        isLoading = false;
+        submitError = false;
+        NavigationManager.NavigateTo("");
+    }
+
+    protected override void OnInitialized()
+    {
+        _editContext = new EditContext(_credentials);
+        _editContext.OnFieldChanged += CheckFields;
+    }
+
+    void CheckFields(object sender, FieldChangedEventArgs e)
+    {
+        isValid = _editContext.Validate();
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        _editContext.OnFieldChanged -= CheckFields;
+    }
+
+}
