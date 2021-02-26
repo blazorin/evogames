@@ -27,7 +27,7 @@ namespace Model.Services
             var passwordHashed = HashingHelper.ComputeSha256Hash(credentials.Password);
 
             var storedUser = await _ctx.Users
-                .Where(user => passwordHashed == user.PasswordHashed && credentials.Email == user.Email)
+                .Where(user => credentials.Email == user.Email && passwordHashed == user.PasswordHashed)
                 .FirstOrDefaultAsync();
 
             return storedUser;
