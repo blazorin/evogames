@@ -1,12 +1,9 @@
 @page "/login"
 
-@using Client.Extensions.Authentication
-@using Microsoft.AspNetCore.WebUtilities
 @implements IDisposable
 @inject HttpClient HttpClient
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
-@attribute [AllowAnonymous]
 
 <h3>Login</h3>
 @if (submitError)
@@ -17,12 +14,16 @@
 <EditForm EditContext="_editContext" OnValidSubmit="HandleLogin">
     <DataAnnotationsValidator/>
 
-
-    <InputText @bind-Value="_credentials.Email" DisplayName="Email"></InputText>
-    <ValidationMessage For="() => _credentials.Email"></ValidationMessage>
-
-    <InputText @bind-Value="_credentials.Password" DisplayName="Password"></InputText>
-    <ValidationMessage For="() => _credentials.Password"></ValidationMessage>
+    <div class="form-group">
+        <label for="loginemail">Email:</label>
+        <InputText @bind-Value="_credentials.Email" DisplayName="Email"/>
+        <ValidationMessage For="() => _credentials.Email"/>
+    </div>s
+    <div class="form-group">
+        <label for="loginpassword">Password:</label>
+        <InputText @bind-Value="_credentials.Password" DisplayName="Password"/>
+        <ValidationMessage For="() => _credentials.Password"/>
+    </div>
 
     <button type="submit" class="btn btn-primary" disabled="@(!isValid || submitError || isLoading)">Send</button>
 </EditForm>
@@ -43,12 +44,14 @@
         if (!response.IsSuccessStatusCode)
         {
             submitError = true;
+            isLoading = false;
             return;
         }
         var userData = await response.Content.ReadFromJsonAsync<UserData>();
         if (userData == null)
         {
             submitError = true;
+            isLoading = false;
             return;
         }
         await ((CustomAuthenticationStateProvider) AuthenticationStateProvider).SetCurrentUserAsync(userData);
