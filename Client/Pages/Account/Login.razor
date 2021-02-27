@@ -1,6 +1,7 @@
 @page "/login"
 
 @using Client.Extensions.Authentication
+@using Microsoft.AspNetCore.WebUtilities
 @implements IDisposable
 @inject HttpClient HttpClient
 @inject NavigationManager NavigationManager
@@ -16,6 +17,7 @@
 <EditForm EditContext="_editContext" OnValidSubmit="HandleLogin">
     <DataAnnotationsValidator/>
 
+
     <InputText @bind-Value="_credentials.Email" DisplayName="Email"></InputText>
     <ValidationMessage For="() => _credentials.Email"></ValidationMessage>
 
@@ -26,6 +28,7 @@
 </EditForm>
 
 @code {
+    string returnUrl;
     private readonly UserCredentials _credentials = new();
     private EditContext _editContext;
     bool isValid;
@@ -52,13 +55,20 @@
 
         isLoading = false;
         submitError = false;
-        NavigationManager.NavigateTo("");
+        NavigationManager.NavigateTo(returnUrl ?? "");
     }
 
     protected override void OnInitialized()
     {
         _editContext = new EditContext(_credentials);
         _editContext.OnFieldChanged += CheckFields;
+
+        var query = NavigationManager.ToAbsoluteUri(NavigationManager.Uri).Query;
+        var queryStringParams = QueryHelpers.ParseQuery(query);
+        if (queryStringParams.TryGetValue("returnUrl", out var returnUrlParam))
+        {
+            returnUrl = returnUrlParam;
+        }
     }
 
     void CheckFields(object sender, FieldChangedEventArgs e)
