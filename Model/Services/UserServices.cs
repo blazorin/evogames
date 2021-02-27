@@ -32,5 +32,10 @@ namespace Model.Services
 
             return storedUser;
         }
+
+        public async Task<bool> EmailExistsAsync(string email)
+        {
+            return await _ctx.Users.AnyAsync(u => u.Email == email);
+        }
     }
 }

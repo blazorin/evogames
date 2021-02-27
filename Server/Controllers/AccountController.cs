@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
@@ -62,6 +63,14 @@ namespace Server.Controllers
             };
 
             return Ok(response);
+        }
+
+
+        [HttpGet("email/{email}")]
+        public async Task<IActionResult> CheckEmail(string email)
+        {
+            var result = await _userServices.EmailExistsAsync(email);
+            return Ok(result);
         }
 
         private string GenerateToken(User user, IEnumerable<string> roles, IEnumerable<Claim> policies)

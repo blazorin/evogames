@@ -8,5 +8,6 @@ namespace Model.Services
     public interface IUserServices
     {
         Task<User> GetUserByAuthenticationAsync(UserCredentials credentials);
+        Task<bool> EmailExistsAsync(string email);
     }
 }
