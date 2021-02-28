@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
@@ -11,6 +10,7 @@ using Microsoft.IdentityModel.Tokens;
 using Model.Data;
 using Model.Services;
 using Shared;
+using Shared.ApiErrors;
 
 namespace Server.Controllers
 {
@@ -28,15 +28,15 @@ namespace Server.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login(UserCredentials credentials)
         {
-            if (credentials == null)
-                return Unauthorized();
+            if (string.IsNullOrWhiteSpace(credentials.Email) || string.IsNullOrWhiteSpace(credentials.Password))
+                return Unauthorized(new UnauthorizedError("email_or_password_blank"));
 
             if (User?.Identity != null && User.Identity.IsAuthenticated)
                 return Forbid();
 
             var user = await _userServices.GetUserByAuthenticationAsync(credentials);
             if (user == null)
-                return Unauthorized();
+                return Unauthorized(new UnauthorizedError("email_or_password_incorrect"));
 
             // TODO: Verificaciones de seguridad adicionales
 
