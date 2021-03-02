@@ -13,8 +13,12 @@ namespace Shared.ApiErrors
             this.StatusCode = statusCode;
             this.StatusDescription = statusDescription;
 
-            if (statusCode == 401)
-                Message = "unauthorized";
+            Message = statusCode switch
+            {
+                401 => "unauthorized",
+                403 => "no_permission",
+                _ => Message
+            };
         }
 
         public ApiError()
