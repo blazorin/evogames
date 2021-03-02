@@ -16,12 +16,12 @@
 
     <div class="form-group">
         <label for="loginemail">Email:</label>
-        <InputText @bind-Value="_credentials.Email" DisplayName="Email"/>
+        <InputText class="form-control col-5" id="loginemail" @bind-Value="_credentials.Email" DisplayName="Email"/>
         <ValidationMessage For="() => _credentials.Email"/>
     </div>s
     <div class="form-group">
         <label for="loginpassword">Password:</label>
-        <InputText @bind-Value="_credentials.Password" DisplayName="Password"/>
+        <InputText class="form-control col-5" id="loginpassword" @bind-Value="_credentials.Password" DisplayName="Password"/>
         <ValidationMessage For="() => _credentials.Password"/>
     </div>
 
