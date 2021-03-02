@@ -6,10 +6,6 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 
 <h3>Login</h3>
-@if (submitError)
-{
-    <h3 class="alert-danger">An error ocurred while sending the request to server</h3>
-}
 
 <EditForm EditContext="_editContext" OnValidSubmit="HandleLogin">
     <DataAnnotationsValidator/>
@@ -25,15 +21,18 @@
         <ValidationMessage For="() => _credentials.Password"/>
     </div>
 
-    <button type="submit" class="btn btn-primary" disabled="@(!isValid || submitError || isLoading)">Send</button>
+    <button type="submit" class="btn btn-primary" disabled="@(!isValid || isLoading)">Send</button>
 </EditForm>
 
 @code {
+
+    [CascadingParameter]
+    public NotificationManager NotificationManager { get; set; }
+
     string returnUrl;
     private readonly UserCredentials _credentials = new();
     private EditContext _editContext;
     bool isValid;
-    bool submitError;
     bool isLoading;
 
     async Task HandleLogin()
@@ -43,21 +42,24 @@
         var response = await HttpClient.PostAsJsonAsync("account/login", _credentials);
         if (!response.IsSuccessStatusCode)
         {
-            submitError = true;
+            var apiError = await response.Content.ReadFromJsonAsync<ApiError>();
+            await NotificationManager.AddToast(apiError?.StatusDescription, apiError?.Message);
+
             isLoading = false;
+            isValid = false;
             return;
         }
         var userData = await response.Content.ReadFromJsonAsync<UserData>();
         if (userData == null)
         {
-            submitError = true;
             isLoading = false;
+            isValid = false;
             return;
         }
+
         await ((CustomAuthenticationStateProvider) AuthenticationStateProvider).SetCurrentUserAsync(userData);
 
         isLoading = false;
-        submitError = false;
         NavigationManager.NavigateTo(returnUrl ?? "");
     }
 
