@@ -1,0 +1,34 @@
+@using Client.Components.Bootstrap
+
+<CascadingValue Value="this">@ChildContent</CascadingValue>
+
+@if (!string.IsNullOrEmpty(title) && !string.IsNullOrEmpty(text))
+{
+    <Toast Title="@title" Text="@text" @ref="toast"/>
+}
+
+@code {
+
+    [Parameter]
+    public RenderFragment ChildContent { get; set; }
+
+    Toast toast;
+
+    string title;
+    string text;
+
+    public async Task AddToast(string toastTitle, string toastText)
+    {
+        if (title == toastTitle && text == toastText)
+        {
+            await toast.ShowAgain();
+            return;
+        }
+
+        title = toastTitle;
+        text = toastText;
+
+        StateHasChanged();
+    }
+
+}
