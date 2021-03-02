@@ -9,5 +9,6 @@ namespace Model.Services
     {
         Task<User> GetUserByAuthenticationAsync(UserCredentials credentials);
         Task<bool> EmailExistsAsync(string email);
+        Task<bool> UsernameExistsAsync(string username);
     }
 }

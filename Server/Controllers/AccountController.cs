@@ -73,6 +73,13 @@ namespace Server.Controllers
             return Ok(result);
         }
 
+        [HttpGet("username/{username}")]
+        public async Task<IActionResult> CheckUsername(string username)
+        {
+            var result = await _userServices.UsernameExistsAsync(username);
+            return Ok(result);
+        }
+
         private string GenerateToken(User user, IEnumerable<string> roles, IEnumerable<Claim> policies)
         {
             var header = new JwtHeader(

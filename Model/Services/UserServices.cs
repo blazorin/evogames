@@ -37,5 +37,10 @@ namespace Model.Services
         {
             return await _ctx.Users.AnyAsync(u => u.Email == email);
         }
+
+        public async Task<bool> UsernameExistsAsync(string username)
+        {
+            return await _ctx.Users.AnyAsync(u => u.Name == username);
+        }
     }
 }
