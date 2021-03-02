@@ -2,11 +2,11 @@ namespace Shared.ApiErrors
 {
     public class ApiError
     {
-        public int StatusCode { get; private set; }
+        public int StatusCode { get; set; }
 
-        public string StatusDescription { get; private set; }
+        public string StatusDescription { get; set; }
 
-        public string Message { get; private set; }
+        public string Message { get; set; }
 
         public ApiError(int statusCode, string statusDescription)
         {
@@ -15,6 +15,10 @@ namespace Shared.ApiErrors
 
             if (statusCode == 401)
                 Message = "unauthorized";
+        }
+
+        public ApiError()
+        {
         }
 
         public ApiError(int statusCode, string statusDescription, string message) : this(statusCode, statusDescription)
