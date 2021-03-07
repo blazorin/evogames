@@ -1,9 +1,8 @@
 @page "/register"
 
 @using System.ComponentModel.DataAnnotations
-@using Client.Extensions.DataAnnotations
-@using global::Shared.Utils
 @using Client.Components.Helper
+@using global::Shared.Extensions.DataAnnotations
 @implements IDisposable
 @implements IValidatableObject
 @inject HttpClient HttpClient
@@ -24,7 +23,7 @@
             {
                 <span class="text-danger">This email already exists</span>
             }
-            <InputText class="form-control col-5" id="email" maxlength="@FieldLenghts.User.Mail" @bind-Value="Email" @oninput="OnEmailChanged" autocomplete="___"/>
+            <InputText class="form-control col-5" id="email" maxlength="@FieldLenghts.User.Mail" @bind-Value="Email" @oninput="OnEmailChanged" autocomplete="email"/>
         </div>
 
         <div class="form-group">
@@ -33,7 +32,7 @@
             {
                 <span class="text-danger">This username already exists</span>
             }
-            <InputText class="form-control col-5" id="username" maxlength="@FieldLenghts.User.Name" @bind-Value="Username" @oninput="OnUsernameChanged" autocomplete="___"/>
+            <InputText class="form-control col-5" id="username" maxlength="@FieldLenghts.User.Name" @bind-Value="Username" @oninput="OnUsernameChanged" autocomplete="off"/>
         </div>
         <div class="form-group">
             <label for="password">Password:</label> <ValidationMessage For="() => Password"/>
@@ -143,7 +142,7 @@
             yield return new ValidationResult("This username is not allowed", new[] {nameof(Username)});
     }
 
-    private async Task CreateAccount()
+    async Task CreateAccount()
     {
         if (emailExists || usernameExists)
             return;
@@ -172,7 +171,7 @@
         var userData = await response.Content.ReadFromJsonAsync<UserData>();
         if (userData == null)
         {
-            isValid = false;
+            NavigationManager.NavigateTo("/register", true);
             return;
         }
 

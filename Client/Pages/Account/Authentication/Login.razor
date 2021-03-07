@@ -1,5 +1,6 @@
 @page "/login"
 
+@using System.ComponentModel.DataAnnotations
 @implements IDisposable
 @inject HttpClient HttpClient
 @inject NavigationManager NavigationManager
@@ -11,13 +12,13 @@
     <DataAnnotationsValidator/>
 
     <div class="form-group">
-        <label for="loginemail">Email:</label>
-        <InputText class="form-control col-5" id="loginemail" @bind-Value="_credentials.Email" DisplayName="Email"/>
+        <label for="email">Email:</label>
+        <InputText class="form-control col-5" id="email" maxlength="@FieldLenghts.User.Mail" @bind-Value="_credentials.Email" autocomplete="email"/>
         <ValidationMessage For="() => _credentials.Email"/>
-    </div>s
+    </div>
     <div class="form-group">
-        <label for="loginpassword">Password:</label>
-        <InputText class="form-control col-5" id="loginpassword" @bind-Value="_credentials.Password" DisplayName="Password"/>
+        <label for="password">Password:</label>
+        <InputText class="form-control col-5" id="password" @bind-Value="_credentials.Password" DisplayName="Password" autocomplete="current-password"/>
         <ValidationMessage For="() => _credentials.Password"/>
     </div>
 
@@ -30,10 +31,35 @@
     public NotificationManager NotificationManager { get; set; }
 
     string returnUrl;
-    private readonly UserCredentials _credentials = new();
-    private EditContext _editContext;
     bool isValid;
     bool isLoading;
+
+    private EditContext _editContext;
+    private ValidationContext _validationContext;
+
+    private readonly UserCredentials _credentials = new();
+
+    protected override void OnInitialized()
+    {
+        _editContext = new EditContext(_credentials);
+        _validationContext = new ValidationContext(_credentials);
+
+        _editContext.OnFieldChanged += CheckFields;
+
+        var query = NavigationManager.ToAbsoluteUri(NavigationManager.Uri).Query;
+        var queryStringParams = QueryHelpers.ParseQuery(query);
+        if (queryStringParams.TryGetValue("returnUrl", out var returnUrlParam))
+        {
+            returnUrl = returnUrlParam;
+        }
+    }
+
+    void CheckFields(object sender, FieldChangedEventArgs e)
+    {
+        isValid = Validator.TryValidateObject(this, _validationContext, new List<ValidationResult>());
+
+        StateHasChanged();
+    }
 
     async Task HandleLogin()
     {
@@ -53,33 +79,13 @@
         var userData = await response.Content.ReadFromJsonAsync<UserData>();
         if (userData == null)
         {
-            isLoading = false;
-            isValid = false;
+            NavigationManager.NavigateTo("/login", true);
             return;
         }
 
         await ((CustomAuthenticationStateProvider) AuthenticationStateProvider).SetCurrentUserAsync(userData);
 
         NavigationManager.NavigateTo(returnUrl ?? "");
-    }
-
-    protected override void OnInitialized()
-    {
-        _editContext = new EditContext(_credentials);
-        _editContext.OnFieldChanged += CheckFields;
-
-        var query = NavigationManager.ToAbsoluteUri(NavigationManager.Uri).Query;
-        var queryStringParams = QueryHelpers.ParseQuery(query);
-        if (queryStringParams.TryGetValue("returnUrl", out var returnUrlParam))
-        {
-            returnUrl = returnUrlParam;
-        }
-    }
-
-    void CheckFields(object sender, FieldChangedEventArgs e)
-    {
-        isValid = _editContext.Validate();
-        StateHasChanged();
     }
 
     public void Dispose()
