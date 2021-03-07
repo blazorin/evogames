@@ -8,7 +8,7 @@ namespace Shared
     {
         public string Username { get; set; }
         public IEnumerable<string> Roles { get; set; }
-        public IEnumerable<Claim> Policies { get; set; }
+        public Dictionary<string, string> Policies { get; set; }
         public string Token { get; set; }
         public Language Language { get; set; }
     }
