@@ -52,7 +52,7 @@ namespace Model.Services
             {
                 new()
                 {
-                    Date = DateTime.Now, UserLogId = Guid.NewGuid().ToString(), UserLogType = UserLogType.SignUp
+                    Date = DateTime.Now, UserLogType = UserLogType.SignUp, UserLogId = Guid.NewGuid().ToString()
                 }
             };
 
