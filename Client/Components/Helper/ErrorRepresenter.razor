@@ -1,0 +1,13 @@
+@using System.ComponentModel.DataAnnotations
+
+@foreach (var validation in ValidationResults)
+{
+    <span class="text-danger">@validation.ErrorMessage</span>
+}
+
+@code {
+
+    [Parameter]
+    public IEnumerable<ValidationResult> ValidationResults { get; set; }
+
+}
