@@ -49,6 +49,7 @@
             isValid = false;
             return;
         }
+
         var userData = await response.Content.ReadFromJsonAsync<UserData>();
         if (userData == null)
         {
@@ -59,7 +60,6 @@
 
         await ((CustomAuthenticationStateProvider) AuthenticationStateProvider).SetCurrentUserAsync(userData);
 
-        isLoading = false;
         NavigationManager.NavigateTo(returnUrl ?? "");
     }
 
