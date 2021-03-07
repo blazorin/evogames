@@ -8,6 +8,7 @@ namespace Model.Services
     public interface IUserServices
     {
         Task<User> GetUserByAuthenticationAsync(UserCredentials credentials);
+        Task<User> AddUserAsync(NewUserDto newUserDto);
         Task<bool> EmailExistsAsync(string email);
         Task<bool> UsernameExistsAsync(string username);
     }
