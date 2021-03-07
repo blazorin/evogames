@@ -40,6 +40,9 @@ namespace Server.Controllers
             if (string.IsNullOrWhiteSpace(credentials.Email) || string.IsNullOrWhiteSpace(credentials.Password))
                 return Unauthorized(new UnauthorizedError("email_or_password_blank"));
 
+            if (credentials.Email.Length > 100)
+                return Unauthorized(new UnauthorizedError("email_too_big"));
+
             var user = await _userServices.GetUserByAuthenticationAsync(credentials);
             if (user == null)
                 return Unauthorized(new UnauthorizedError("email_or_password_incorrect"));
@@ -69,6 +72,12 @@ namespace Server.Controllers
 
             if (string.IsNullOrEmpty(newUser.Name) || newUser.Name.Length < 4)
                 return Unauthorized(new UnauthorizedError("username_too_small"));
+
+            if (newUser.Name.Length > 20)
+                return Unauthorized(new UnauthorizedError("username_too_big"));
+
+            if (newUser.Email.Length > 100)
+                return Unauthorized(new UnauthorizedError("email_too_big"));
 
             // Check email if registered
             var emailRegistered = await _userServices.EmailExistsAsync(newUser.Email);
@@ -125,8 +134,8 @@ namespace Server.Controllers
             // Claims are not supported to be sent in JSON (no default constructor), so I've made this workaround
             var policiesInClaims = new List<Claim>();
             policiesInClaims.AddRange(user.Perms.Select(perm => new Claim(perm.PermKey, perm.PermValue)));
-            
-            var policiesInString = 
+
+            var policiesInString =
                 user.Perms.ToDictionary(perm => perm.PermKey, perm => perm.PermValue);
 
             var roles = new List<string>();
@@ -139,7 +148,7 @@ namespace Server.Controllers
                 roles.Add("admin");
             if (user.IsModerator)
                 roles.Add("moderator");
-            
+
 
             var response = new UserData
             {
