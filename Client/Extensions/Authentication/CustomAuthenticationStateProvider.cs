@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using Blazored.LocalStorage;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.JSInterop;
 using Shared;
@@ -14,12 +15,12 @@ namespace Client.Extensions.Authentication
     public class CustomAuthenticationStateProvider : AuthenticationStateProvider
     {
         private readonly HttpClient _httpClient;
-        private readonly IJSRuntime _jsRuntime;
+        private readonly ILocalStorageService _localStorage;
 
-        public CustomAuthenticationStateProvider(HttpClient httpClient, IJSRuntime jsRuntime)
+        public CustomAuthenticationStateProvider(HttpClient httpClient, ILocalStorageService localStorage)
         {
             _httpClient = httpClient;
-            _jsRuntime = jsRuntime;
+            _localStorage = localStorage;
         }
 
         /// <summary>
@@ -28,7 +29,7 @@ namespace Client.Extensions.Authentication
         /// <returns></returns>
         public override async Task<AuthenticationState> GetAuthenticationStateAsync()
         {
-            var storedUser = await _jsRuntime.InvokeAsync<UserData>("localStorage.getItem", "user");
+            var storedUser = await _localStorage.GetItemAsync<UserData>("user");
 
             if (storedUser == null)
                 return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
@@ -37,9 +38,12 @@ namespace Client.Extensions.Authentication
             {
                 new(ClaimTypes.Name, storedUser.Username)
             };
-
             claims.AddRange(storedUser.Roles.Select(role => new Claim(ClaimTypes.Role, role)));
-            claims.AddRange(storedUser.Policies);
+
+            foreach (var (key, value) in storedUser.Policies)
+            {
+                claims.Add(new Claim(key, value));
+            }
 
             _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("bearer", storedUser.Token);
 
@@ -57,7 +61,12 @@ namespace Client.Extensions.Authentication
                 new(ClaimTypes.Name, userData.Username)
             };
             claims.AddRange(userData.Roles.Select(role => new Claim(ClaimTypes.Role, role)));
-            claims.AddRange(userData.Policies);
+
+            // Convert back to <Claim>
+            foreach (var (key, value) in userData.Policies)
+            {
+                claims.Add(new Claim(key, value));
+            }
 
             var claimsIdentity = new ClaimsIdentity(claims, "custom");
             var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
@@ -65,7 +74,7 @@ namespace Client.Extensions.Authentication
 
             NotifyAuthenticationStateChanged(Task.FromResult(authState));
 
-            await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "user", userData);
+            await _localStorage.SetItemAsync("user", userData);
             _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("bearer", userData.Token);
         }
 
@@ -75,7 +84,7 @@ namespace Client.Extensions.Authentication
             var authStateTask = Task.FromResult(new AuthenticationState(anonymousPrincipal));
             NotifyAuthenticationStateChanged(authStateTask);
 
-            await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "user");
+            await _localStorage.RemoveItemAsync("user");
             _httpClient.DefaultRequestHeaders.Remove("Authorization");
         }
     }
