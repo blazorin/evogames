@@ -1,0 +1,56 @@
+@inject BootstrapServices BootstrapServices
+
+<div aria-live="polite" aria-atomic="true" class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
+    <div class="toast text-white bg-primary border-0" role="alert" aria-live="assertive" aria-atomic="true" data-delay="10000" @ref="toastElement">
+        <div class="d-flex">
+            <div class="toast-body">
+                <div style="text-align: center;">
+                    An @Title error ocurred<br/>
+                    @Text<br/>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+
+    [Parameter]
+    public string Title { get; set; } = "Information";
+
+    [Parameter]
+    public string Text { get; set; }
+
+    ElementReference toastElement;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await ShowInJs();
+    }
+
+    /// Only called if title and message is the same as before
+    public async Task ShowAgain()
+    {
+        await ShowInJs();
+    }
+
+
+    async Task ShowInJs()
+    {
+        await BootstrapServices.ShowToastAsync(toastElement);
+    }
+
+
+    [Obsolete("This method is deprecated. Instance a new notification and only update its DOM element.")]
+    public static RenderFragment GetRenderFragment(string title, string text)
+    {
+        return b =>
+        {
+            b.OpenComponent<Toast>(1);
+            b.AddAttribute(2, "Title", title);
+            b.AddAttribute(3, "Text", text);
+            b.CloseComponent();
+        };
+    }
+
+}

@@ -1,8 +1,6 @@
-using System;
 using System.Text;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -56,6 +54,12 @@ namespace Server
             {
                 db.Database.EnsureCreated();
             }
+
+            // Handles exceptions and generates a custom response body
+            app.UseExceptionHandler("/errors/500");
+
+            // Handles non-success status codes with empty body
+            app.UseStatusCodePagesWithReExecute("/errors/{0}");
 
             if (env.IsDevelopment())
             {

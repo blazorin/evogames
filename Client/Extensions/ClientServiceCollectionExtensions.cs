@@ -1,3 +1,5 @@
+using Blazored.LocalStorage;
+using Client.Components.Bootstrap;
 using Client.Extensions.Authentication;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.DependencyInjection;
@@ -9,6 +11,8 @@ namespace Client.Extensions
         public static IServiceCollection AddEvoGamesClientServices(this IServiceCollection services)
         {
             services.AddScoped<AuthenticationStateProvider, CustomAuthenticationStateProvider>();
+            services.AddSingleton<BootstrapServices>();
+            services.AddBlazoredLocalStorage();
             return services;
         }
     }

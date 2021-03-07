@@ -2,6 +2,8 @@ using AutoMapper;
 using Microsoft.Extensions.DependencyInjection;
 using Model.Data;
 using Model.Mapping;
+using Model.Services;
+using Shared;
 
 namespace Model.Extensions
 {
@@ -17,6 +19,10 @@ namespace Model.Extensions
             // Essential
             services.AddDbContext<EvoGamesContext>();
             services.AddAutoMapper(typeof(MappingProfile).Assembly);
+
+            //User
+            services.AddScoped<IUserServices, UserServices>();
+
             return services;
         }
     }

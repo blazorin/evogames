@@ -1,4 +1,5 @@
-﻿@inherits LayoutComponentBase
+﻿@using Client.Components.Internal
+@inherits LayoutComponentBase
 
 <div class="page">
     <div class="sidebar">
@@ -8,10 +9,28 @@
     <div class="main">
         <div class="top-row px-4">
             <a href="http://blazor.net" target="_blank" class="ml-md-auto">About</a>
+            <AuthorizeView>
+                <Authorized Context="authenticationState">
+                    <p class="ml-md-auto">Welcome @authenticationState.User.Identity?.Name</p>
+                </Authorized>
+                <NotAuthorized>
+                    <a href="login" class="ml-md-auto">Sign In</a>
+                    <a href="register" class="ml-md-auto">Sign Up</a>
+                </NotAuthorized>
+                <Authorizing>
+                    Loading...
+                </Authorizing>
+            </AuthorizeView>
         </div>
 
         <div class="content px-4">
-            @Body
+            <NotificationManager>
+                @Body
+            </NotificationManager>
         </div>
     </div>
 </div>
+
+@code {
+
+}

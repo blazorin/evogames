@@ -1,0 +1,90 @@
+@page "/login"
+
+@implements IDisposable
+@inject HttpClient HttpClient
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<h3>Login</h3>
+
+<EditForm EditContext="_editContext" OnValidSubmit="HandleLogin">
+    <DataAnnotationsValidator/>
+
+    <div class="form-group">
+        <label for="loginemail">Email:</label>
+        <InputText class="form-control col-5" id="loginemail" @bind-Value="_credentials.Email" DisplayName="Email"/>
+        <ValidationMessage For="() => _credentials.Email"/>
+    </div>s
+    <div class="form-group">
+        <label for="loginpassword">Password:</label>
+        <InputText class="form-control col-5" id="loginpassword" @bind-Value="_credentials.Password" DisplayName="Password"/>
+        <ValidationMessage For="() => _credentials.Password"/>
+    </div>
+
+    <button type="submit" class="btn btn-primary" disabled="@(!isValid || isLoading)">Send</button>
+</EditForm>
+
+@code {
+
+    [CascadingParameter]
+    public NotificationManager NotificationManager { get; set; }
+
+    string returnUrl;
+    private readonly UserCredentials _credentials = new();
+    private EditContext _editContext;
+    bool isValid;
+    bool isLoading;
+
+    async Task HandleLogin()
+    {
+        isLoading = true;
+
+        var response = await HttpClient.PostAsJsonAsync("account/login", _credentials);
+        if (!response.IsSuccessStatusCode)
+        {
+            var apiError = await response.Content.ReadFromJsonAsync<ApiError>();
+            await NotificationManager.AddToast(apiError?.StatusDescription, apiError?.Message);
+
+            isLoading = false;
+            isValid = false;
+            return;
+        }
+
+        var userData = await response.Content.ReadFromJsonAsync<UserData>();
+        if (userData == null)
+        {
+            isLoading = false;
+            isValid = false;
+            return;
+        }
+
+        await ((CustomAuthenticationStateProvider) AuthenticationStateProvider).SetCurrentUserAsync(userData);
+
+        NavigationManager.NavigateTo(returnUrl ?? "");
+    }
+
+    protected override void OnInitialized()
+    {
+        _editContext = new EditContext(_credentials);
+        _editContext.OnFieldChanged += CheckFields;
+
+        var query = NavigationManager.ToAbsoluteUri(NavigationManager.Uri).Query;
+        var queryStringParams = QueryHelpers.ParseQuery(query);
+        if (queryStringParams.TryGetValue("returnUrl", out var returnUrlParam))
+        {
+            returnUrl = returnUrlParam;
+        }
+    }
+
+    void CheckFields(object sender, FieldChangedEventArgs e)
+    {
+        isValid = _editContext.Validate();
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        _editContext.OnFieldChanged -= CheckFields;
+    }
+
+}

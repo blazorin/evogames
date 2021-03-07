@@ -1,0 +1,222 @@
+@page "/register"
+
+@using System.ComponentModel.DataAnnotations
+@using Client.Extensions.DataAnnotations
+@using global::Shared.Utils
+@using Client.Components.Helper
+@implements IDisposable
+@implements IValidatableObject
+@inject HttpClient HttpClient
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<h3>Register</h3>
+
+<EditForm EditContext="_editContext" OnValidSubmit="CreateAccount">
+    <DataAnnotationsValidator></DataAnnotationsValidator>
+    <ErrorRepresenter ValidationResults="@_validations"/>
+    <fieldset>
+        <legend>Credentials</legend>
+
+        <div class="form-group">
+            <label for="email">Email:</label> <ValidationMessage For="() => Email"/>
+            @if (emailExists)
+            {
+                <span class="text-danger">This email already exists</span>
+            }
+            <InputText class="form-control col-5" id="email" maxlength="@FieldLenghts.User.Mail" @bind-Value="Email" @oninput="OnEmailChanged" autocomplete="___"/>
+        </div>
+
+        <div class="form-group">
+            <label for="username">Username:</label> <ValidationMessage For="() => Username"/>
+            @if (usernameExists)
+            {
+                <span class="text-danger">This username already exists</span>
+            }
+            <InputText class="form-control col-5" id="username" maxlength="@FieldLenghts.User.Name" @bind-Value="Username" @oninput="OnUsernameChanged" autocomplete="___"/>
+        </div>
+        <div class="form-group">
+            <label for="password">Password:</label> <ValidationMessage For="() => Password"/>
+            <InputText type="password" class="form-control col-5" id="password" @bind-Value="Password" autocomplete="new-password"/>
+        </div>
+        <div class="form-group">
+            <label for="repeatpassword">Repeat password:</label> <ValidationMessage For="() => RepeatPassword"/>
+            <InputText type="password" class="form-control col-5" id="repeatpassword" @bind-Value="RepeatPassword" autocomplete="new-password"/>
+        </div>
+    </fieldset>
+    <fieldset>
+        <legend>User information</legend>
+        <div class="form-group">
+            <label for="country">Country:</label> <ValidationMessage For="() => Country"/>
+            @*<InputText class="form-control col-5" id="country" @bind-Value="Country" maxlength="@FieldLenghts.User.Country"/>*@
+
+            <CountrySelector CountryChanged="country => Country = country"></CountrySelector> <br/>
+            Value: @Country
+        </div>
+        <div class="form-group">
+            <label for="birth">Birth Date:</label> <ValidationMessage For="() => Birth"/>
+
+            <InputDate @bind-Value="Birth" id="birth" DisplayName="Select Date"/>
+        </div>
+    </fieldset>
+    <button class="btn btn-primary btn-lg" disabled="@(!isValid || isCreating || emailExists || usernameExists)">
+        @if (isCreating)
+        {
+            @:<span class="spinner-border"></span> Signing up...
+        }
+        else
+        {
+            @:Sign up
+        }
+    </button>
+</EditForm>
+
+@code {
+
+    string returnUrl;
+    bool emailExists;
+    bool usernameExists;
+    bool isValid;
+    bool isCreating;
+
+    private EditContext _editContext;
+    private ValidationContext _validationContext;
+    private IEnumerable<ValidationResult> _validations = new List<ValidationResult>();
+
+    [CascadingParameter]
+    public NotificationManager NotificationManager { get; set; }
+
+    [RequiredField, FieldLength(FieldLenghts.User.Mail), EmailAddress(ErrorMessage = "Invalid email address")]
+    public string Email { get; set; }
+
+    [RequiredField, FieldLength(FieldLenghts.User.Name), MinLength(4)]
+    [RegularExpression(@"^+[A-Za-z]+$", ErrorMessage = "Username can only contain letters")]
+    public string Username { get; set; }
+
+    [RequiredField, FieldLength(FieldLenghts.User.Country)]
+    public string Country { get; set; }
+
+    [RequiredField, FieldLength(FieldLenghts.User.Password)]
+    public string Password { get; set; }
+
+    [RequiredField]
+    public DateTime Birth { get; set; } = new(DateTime.Now.Year - 18, DateTime.Now.Month, DateTime.Now.Day);
+
+    [RequiredField, FieldLength(FieldLenghts.User.Password)]
+    public string RepeatPassword { get; set; }
+
+    protected override void OnInitialized()
+    {
+        _editContext = new EditContext(this);
+        _validationContext = new ValidationContext(this);
+
+        _editContext.OnFieldChanged += CheckFields;
+
+        var query = NavigationManager.ToAbsoluteUri(NavigationManager.Uri).Query;
+        var queryStringParams = QueryHelpers.ParseQuery(query);
+        if (queryStringParams.TryGetValue("returnUrl", out var returnUrlParam))
+        {
+            returnUrl = returnUrlParam;
+        }
+    }
+
+    void CheckFields(object sender, FieldChangedEventArgs args)
+    {
+        _validations = Validate(_validationContext);
+
+        isValid = Validator.TryValidateObject(this, _validationContext, _validations.ToList());
+
+        StateHasChanged();
+    }
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (Password != RepeatPassword)
+        {
+            yield return new ValidationResult("Passwords don't match", new[] {nameof(Password), nameof(RepeatPassword)});
+        }
+
+        if (Birth.Year + 18 > DateTime.Now.Year)
+            yield return new ValidationResult("You need to be at least major of age to play", new[] {nameof(Birth)});
+
+        if (BlackList.Names.Any(name => name == Username))
+            yield return new ValidationResult("This username is not allowed", new[] {nameof(Username)});
+    }
+
+    private async Task CreateAccount()
+    {
+        if (emailExists || usernameExists)
+            return;
+
+        isCreating = true;
+
+        var newUserDto = new NewUserDto
+        {
+            Email = this.Email,
+            Name = this.Username,
+            Country = this.Country,
+            Birth = this.Birth,
+            Password = this.Password
+        };
+
+        var response = await HttpClient.PostAsJsonAsync("account/register", newUserDto);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var apiError = await response.Content.ReadFromJsonAsync<ApiError>();
+            await NotificationManager.AddToast(apiError?.StatusDescription, apiError?.Message);
+            isCreating = false;
+            return;
+        }
+
+        var userData = await response.Content.ReadFromJsonAsync<UserData>();
+        if (userData == null)
+        {
+            isValid = false;
+            return;
+        }
+
+        await ((CustomAuthenticationStateProvider) AuthenticationStateProvider).SetCurrentUserAsync(userData);
+
+        NavigationManager.NavigateTo(returnUrl ?? "");
+    }
+
+    private async Task OnEmailChanged(ChangeEventArgs args)
+    {
+        var value = args.Value?.ToString();
+        var response = await HttpClient.GetAsync($"account/email/{value}");
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var apiError = await response.Content.ReadFromJsonAsync<ApiError>();
+            await NotificationManager.AddToast(apiError?.StatusDescription, apiError?.Message);
+            return;
+        }
+        var result = await response.Content.ReadFromJsonAsync<bool>();
+
+        emailExists = result;
+    }
+
+    private async Task OnUsernameChanged(ChangeEventArgs args)
+    {
+        var value = args.Value?.ToString();
+        var response = await HttpClient.GetAsync($"account/username/{value}");
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var apiError = await response.Content.ReadFromJsonAsync<ApiError>();
+            await NotificationManager.AddToast(apiError?.StatusDescription, apiError?.Message);
+            return;
+        }
+
+        var result = await response.Content.ReadFromJsonAsync<bool>();
+
+        usernameExists = result;
+    }
+
+    public void Dispose()
+    {
+        _editContext.OnFieldChanged -= CheckFields;
+    }
+
+}
