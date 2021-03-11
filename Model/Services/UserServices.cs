@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
-using AutoMapper.QueryableExtensions;
 using Microsoft.EntityFrameworkCore;
 using Model.Data;
 using Model.Utils;
@@ -38,7 +37,7 @@ namespace Model.Services
 
             storedUser.LastLogin = DateTime.Now;
             storedUser.Logs.Add(new UserLog
-                {Date = DateTime.Now, UserLogId = Guid.NewGuid().ToString(), UserLogType = UserLogType.Login});
+                {Date = DateTime.Now, UserLogId = Guid.NewGuid().ToString() + Guid.NewGuid(), UserLogType = UserLogType.Login});
             await _ctx.SaveChangesAsync();
 
             return storedUser;
@@ -52,7 +51,7 @@ namespace Model.Services
             {
                 new()
                 {
-                    Date = DateTime.Now, UserLogType = UserLogType.SignUp, UserLogId = Guid.NewGuid().ToString()
+                    Date = DateTime.Now, UserLogType = UserLogType.SignUp, UserLogId = Guid.NewGuid().ToString() + Guid.NewGuid()
                 }
             };
 
