@@ -1,50 +1,48 @@
 @page "/login"
 
-@using System.ComponentModel.DataAnnotations
-@implements IDisposable
 @inject HttpClient HttpClient
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ISnackbar Snackbar
 
-<h3>Login</h3>
-
-<EditForm EditContext="_editContext" OnValidSubmit="HandleLogin">
-    <DataAnnotationsValidator/>
-
-    <div class="form-group">
-        <label for="email">Email:</label>
-        <InputText class="form-control col-5" id="email" maxlength="@FieldLenghts.User.Mail" @bind-Value="_credentials.Email" autocomplete="email"/>
-        <ValidationMessage For="() => _credentials.Email"/>
-    </div>
-    <div class="form-group">
-        <label for="password">Password:</label>
-        <InputText class="form-control col-5" id="password" @bind-Value="_credentials.Password" DisplayName="Password" autocomplete="current-password"/>
-        <ValidationMessage For="() => _credentials.Password"/>
-    </div>
-
-    <button type="submit" class="btn btn-primary" disabled="@(!isValid || isLoading)">Send</button>
-</EditForm>
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-16">
+    <MudCard>
+        <MudCardContent>
+            <MudForm @bind-IsValid="@isValid">
+                <MudTextField T="string" Label="Email" Required="true" Immediate="true" RequiredError="Email is required" HelperText="Your current email"
+                              Validation="@(new Func<string, IEnumerable<string>>(CheckEmail))" @ref="                                            Email"/>
+                <MudTextField T="string" Label="Password" Required="true"
+                              RequiredError="Password is required"
+                              HelperText="Your current password"
+                              Immediate="true"
+                              InputType="InputType.Password"
+                              Validation="@(new Func<string, IEnumerable<string>>(CheckPassword))"
+                              @ref="                                            Password"/>
+            </MudForm>
+        </MudCardContent>
+        <MudCardActions>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!isValid || isLoging)" Class="ml-auto" OnClick="HandleLogin">Login</MudButton>
+        </MudCardActions>
+    </MudCard>
+</MudContainer>
 
 @code {
 
-    [CascadingParameter]
-    public NotificationManager NotificationManager { get; set; }
-
     string returnUrl;
     bool isValid;
-    bool isLoading;
+    bool isLoging;
 
-    private EditContext _editContext;
-    private ValidationContext _validationContext;
+    MudTextField<string> Email;
+    MudTextField<string> Password;
 
-    private readonly UserCredentials _credentials = new();
-
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        _editContext = new EditContext(_credentials);
-        _validationContext = new ValidationContext(_credentials);
-
-        _editContext.OnFieldChanged += CheckFields;
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        if (authState.User.Identity != null && authState.User.Identity.IsAuthenticated)
+        {
+            NavigationManager.NavigateTo("");
+            return;
+        }
 
         var query = NavigationManager.ToAbsoluteUri(NavigationManager.Uri).Query;
         var queryStringParams = QueryHelpers.ParseQuery(query);
@@ -54,25 +52,42 @@
         }
     }
 
-    void CheckFields(object sender, FieldChangedEventArgs e)
+    private static IEnumerable<string> CheckEmail(string arg)
     {
-        isValid = Validator.TryValidateObject(this, _validationContext, new List<ValidationResult>());
+        if (string.IsNullOrWhiteSpace(arg))
+        {
+            yield return "Email is required";
+            yield break;
+        }
 
-        StateHasChanged();
+        if (!CheckValidEmail.Validate(arg))
+            yield return "Invalid email";
+    }
+
+    private static IEnumerable<string> CheckPassword(string pw)
+    {
+        if (string.IsNullOrWhiteSpace(pw))
+        {
+            yield return "Password is required";
+            yield break;
+        }
+        if (pw.Length < 8)
+            yield return "Password too short";
     }
 
     async Task HandleLogin()
     {
-        isLoading = true;
+        isLoging = true;
 
-        var response = await HttpClient.PostAsJsonAsync("account/login", _credentials);
+        var credentials = new UserCredentials {Email = this.Email.Value, Password = this.Password.Value};
+
+        var response = await HttpClient.PostAsJsonAsync("account/login", credentials);
         if (!response.IsSuccessStatusCode)
         {
             var apiError = await response.Content.ReadFromJsonAsync<ApiError>();
-            await NotificationManager.AddToast(apiError?.StatusDescription, apiError?.Message);
+            Snackbar.Add(apiError?.Message, Severity.Error);
 
-            isLoading = false;
-            isValid = false;
+            isLoging = false;
             return;
         }
 
@@ -86,11 +101,6 @@
         await ((CustomAuthenticationStateProvider) AuthenticationStateProvider).SetCurrentUserAsync(userData);
 
         NavigationManager.NavigateTo(returnUrl ?? "");
-    }
-
-    public void Dispose()
-    {
-        _editContext.OnFieldChanged -= CheckFields;
     }
 
 }
