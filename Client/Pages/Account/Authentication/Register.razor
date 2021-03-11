@@ -1,75 +1,45 @@
 @page "/register"
 
-@using System.ComponentModel.DataAnnotations
-@using Client.Extensions.DataAnnotations
-@using global::Shared.Utils
+@using System.Text.RegularExpressions
 @using Client.Components.Helper
-@implements IDisposable
-@implements IValidatableObject
 @inject HttpClient HttpClient
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ISnackbar Snackbar
 
-<h3>Register</h3>
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-16">
+    <MudCard>
+        <MudCardContent>
+            <MudForm @bind-IsValid="@isValid">
+                <MudTextField T="string" Label="Email" Required="true" Immediate="true" RequiredError="Email is required"
+                              Validation="@(new Func<string, IEnumerable<string>>(CheckEmail))" OnKeyUp="OnEmailChanged" @ref="                                            Email"/>
+                <MudTextField T="string" Label="Username" HelperText="Letters and numbers allowed" Required="true" Immediate="true"
+                              RequiredError="Username is required" Validation="@(new Func<string, IEnumerable<string>>(CheckUsername))" @ref="                                            Username" OnKeyUp="OnUsernameChanged"/>
+                <MudTextField T="string" Label="Password" HelperText="Choose a strong password" Required="true"
+                              RequiredError="Password is required"
+                              Immediate="true"
+                              InputType="InputType.Password"
+                              Validation="@(new Func<string, IEnumerable<string>>(PasswordStrength))"
+                              @ref="                                            Password"/>
+                <MudTextField T="string"
+                              Label="Password" HelperText="Repeat the password" Required="true" RequiredError="Repeat your password" InputType="InputType.Password"
+                              Validation="@(new Func<string, string>(PasswordMatch))"
+                              @ref="                                            PasswordRepeat"/>
 
-<EditForm EditContext="_editContext" OnValidSubmit="CreateAccount">
-    <DataAnnotationsValidator></DataAnnotationsValidator>
-    <ErrorRepresenter ValidationResults="@_validations"/>
-    <fieldset>
-        <legend>Credentials</legend>
-
-        <div class="form-group">
-            <label for="email">Email:</label> <ValidationMessage For="() => Email"/>
-            @if (emailExists)
-            {
-                <span class="text-danger">This email already exists</span>
-            }
-            <InputText class="form-control col-5" id="email" maxlength="@FieldLenghts.User.Mail" @bind-Value="Email" @oninput="OnEmailChanged" autocomplete="___"/>
-        </div>
-
-        <div class="form-group">
-            <label for="username">Username:</label> <ValidationMessage For="() => Username"/>
-            @if (usernameExists)
-            {
-                <span class="text-danger">This username already exists</span>
-            }
-            <InputText class="form-control col-5" id="username" maxlength="@FieldLenghts.User.Name" @bind-Value="Username" @oninput="OnUsernameChanged" autocomplete="___"/>
-        </div>
-        <div class="form-group">
-            <label for="password">Password:</label> <ValidationMessage For="() => Password"/>
-            <InputText type="password" class="form-control col-5" id="password" @bind-Value="Password" autocomplete="new-password"/>
-        </div>
-        <div class="form-group">
-            <label for="repeatpassword">Repeat password:</label> <ValidationMessage For="() => RepeatPassword"/>
-            <InputText type="password" class="form-control col-5" id="repeatpassword" @bind-Value="RepeatPassword" autocomplete="new-password"/>
-        </div>
-    </fieldset>
-    <fieldset>
-        <legend>User information</legend>
-        <div class="form-group">
-            <label for="country">Country:</label> <ValidationMessage For="() => Country"/>
-            @*<InputText class="form-control col-5" id="country" @bind-Value="Country" maxlength="@FieldLenghts.User.Country"/>*@
-
-            <CountrySelector CountryChanged="country => Country = country"></CountrySelector> <br/>
-            Value: @Country
-        </div>
-        <div class="form-group">
-            <label for="birth">Birth Date:</label> <ValidationMessage For="() => Birth"/>
-
-            <InputDate @bind-Value="Birth" id="birth" DisplayName="Select Date"/>
-        </div>
-    </fieldset>
-    <button class="btn btn-primary btn-lg" disabled="@(!isValid || isCreating || emailExists || usernameExists)">
-        @if (isCreating)
-        {
-            @:<span class="spinner-border"></span> Signing up...
-        }
-        else
-        {
-            @:Sign up
-        }
-    </button>
-</EditForm>
+                <MudItem xs="12" sm="6" md="4">
+                    @*This should use the current UI Culture, by default *@
+                    <MudDatePicker Label="Birth" @bind-Date="@Birth" HelperText="Enter your Birth Date" Validation="@(new Func<DateTime?, string>(CheckAge))"></MudDatePicker>
+                </MudItem>
+                <NewCountrySelector @bind-Country="@Country"></NewCountrySelector>
+                <MudCheckBox T="bool" Required="true" RequiredError="You must agree" Class="ml-n2"
+                             Label="I agree with EVO.Games ToS" Color="Color.Tertiary"/>
+            </MudForm>
+        </MudCardContent>
+        <MudCardActions>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!isValid || isCreating)" Class="ml-auto" OnClick="CreateAccount">Register</MudButton>
+        </MudCardActions>
+    </MudCard>
+</MudContainer>
 
 @code {
 
@@ -79,38 +49,21 @@
     bool isValid;
     bool isCreating;
 
-    private EditContext _editContext;
-    private ValidationContext _validationContext;
-    private IEnumerable<ValidationResult> _validations = new List<ValidationResult>();
+    MudTextField<string> Email;
+    MudTextField<string> Username;
+    string Country;
+    MudTextField<string> Password;
+    MudTextField<string> PasswordRepeat;
+    DateTime? Birth = new(DateTime.Now.Year - 18, DateTime.Now.Month, DateTime.Now.Day);
 
-    [CascadingParameter]
-    public NotificationManager NotificationManager { get; set; }
-
-    [RequiredField, FieldLength(FieldLenghts.User.Mail), EmailAddress(ErrorMessage = "Invalid email address")]
-    public string Email { get; set; }
-
-    [RequiredField, FieldLength(FieldLenghts.User.Name), MinLength(4)]
-    [RegularExpression(@"^+[A-Za-z]+$", ErrorMessage = "Username can only contain letters")]
-    public string Username { get; set; }
-
-    [RequiredField, FieldLength(FieldLenghts.User.Country)]
-    public string Country { get; set; }
-
-    [RequiredField, FieldLength(FieldLenghts.User.Password)]
-    public string Password { get; set; }
-
-    [RequiredField]
-    public DateTime Birth { get; set; } = new(DateTime.Now.Year - 18, DateTime.Now.Month, DateTime.Now.Day);
-
-    [RequiredField, FieldLength(FieldLenghts.User.Password)]
-    public string RepeatPassword { get; set; }
-
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        _editContext = new EditContext(this);
-        _validationContext = new ValidationContext(this);
-
-        _editContext.OnFieldChanged += CheckFields;
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        if (authState.User.Identity != null && authState.User.Identity.IsAuthenticated)
+        {
+            NavigationManager.NavigateTo("");
+            return;
+        }
 
         var query = NavigationManager.ToAbsoluteUri(NavigationManager.Uri).Query;
         var queryStringParams = QueryHelpers.ParseQuery(query);
@@ -120,30 +73,80 @@
         }
     }
 
-    void CheckFields(object sender, FieldChangedEventArgs args)
+    private IEnumerable<string> CheckEmail(string arg)
     {
-        _validations = Validate(_validationContext);
+    //EmailAddressAttribute attribute = new();
 
-        isValid = Validator.TryValidateObject(this, _validationContext, _validations.ToList());
-
-        StateHasChanged();
-    }
-
-    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
-    {
-        if (Password != RepeatPassword)
+        if (string.IsNullOrWhiteSpace(arg))
         {
-            yield return new ValidationResult("Passwords don't match", new[] {nameof(Password), nameof(RepeatPassword)});
+            yield return "Email is required";
+            yield break;
         }
 
-        if (Birth.Year + 18 > DateTime.Now.Year)
-            yield return new ValidationResult("You need to be at least major of age to play", new[] {nameof(Birth)});
+        if (!CheckValidEmail.Validate(arg))
+            yield return "Invalid email";
 
-        if (BlackList.Names.Any(name => name == Username))
-            yield return new ValidationResult("This username is not allowed", new[] {nameof(Username)});
+        if (emailExists)
+            yield return "This email already exists";
     }
 
-    private async Task CreateAccount()
+    private IEnumerable<string> CheckUsername(string arg)
+    {
+        if (string.IsNullOrWhiteSpace(arg))
+        {
+            yield return "Username is required";
+            yield break;
+        }
+
+        if (BlackList.Names.Any(name => name == arg))
+            yield return $"Username {arg} is not allowed";
+
+        if (usernameExists)
+            yield return "This username already exists";
+
+        if (arg.Length < 4)
+            yield return "Username too short";
+
+
+        if (arg.Length > 15)
+            yield return "Username too large";
+
+        if (!arg.All(char.IsLetterOrDigit))
+            yield return "Username does not accept symbols";
+    }
+
+    private string CheckAge(DateTime? arg)
+    {
+        return DateTime.Compare(arg.Value.AddYears(18), DateTime.Now) == 1 ? "You need to be major of age to play" : null;
+    }
+
+    private IEnumerable<string> PasswordStrength(string pw)
+    {
+        if (string.IsNullOrWhiteSpace(pw))
+        {
+            yield return "Password is required";
+            yield break;
+        }
+        if (pw.Length < 8)
+            yield return "Password must be at least of length 8";
+        if (!Regex.IsMatch(pw, @"[A-Z]"))
+            yield return "Password must contain at least one capital letter";
+        if (!Regex.IsMatch(pw, @"[a-z]"))
+            yield return "Password must contain at least one lowercase letter";
+        if (!Regex.IsMatch(pw, @"[0-9]"))
+            yield return "Password must contain at least one digit";
+
+        if (!string.IsNullOrEmpty(PasswordRepeat.Value))
+            PasswordRepeat.Validate();
+    }
+
+
+    private string PasswordMatch(string arg)
+    {
+        return !string.IsNullOrEmpty(Password.Value) && Password.Value != arg ? "Passwords don't match" : null;
+    }
+
+    async Task CreateAccount()
     {
         if (emailExists || usernameExists)
             return;
@@ -152,11 +155,11 @@
 
         var newUserDto = new NewUserDto
         {
-            Email = this.Email,
-            Name = this.Username,
+            Email = this.Email.Value,
+            Name = this.Username.Value,
             Country = this.Country,
-            Birth = this.Birth,
-            Password = this.Password
+            Birth = this.Birth.Value,
+            Password = this.Password.Value
         };
 
         var response = await HttpClient.PostAsJsonAsync("account/register", newUserDto);
@@ -164,7 +167,8 @@
         if (!response.IsSuccessStatusCode)
         {
             var apiError = await response.Content.ReadFromJsonAsync<ApiError>();
-            await NotificationManager.AddToast(apiError?.StatusDescription, apiError?.Message);
+            Snackbar.Add(apiError?.Message, Severity.Error);
+
             isCreating = false;
             return;
         }
@@ -172,7 +176,7 @@
         var userData = await response.Content.ReadFromJsonAsync<UserData>();
         if (userData == null)
         {
-            isValid = false;
+            NavigationManager.NavigateTo("/register", true);
             return;
         }
 
@@ -181,42 +185,35 @@
         NavigationManager.NavigateTo(returnUrl ?? "");
     }
 
-    private async Task OnEmailChanged(ChangeEventArgs args)
+    private async Task OnEmailChanged(KeyboardEventArgs args)
     {
-        var value = args.Value?.ToString();
+        var value = Email.Value;
+        if (!CheckValidEmail.Validate(value))
+            return;
+
+
         var response = await HttpClient.GetAsync($"account/email/{value}");
 
-        if (!response.IsSuccessStatusCode)
-        {
-            var apiError = await response.Content.ReadFromJsonAsync<ApiError>();
-            await NotificationManager.AddToast(apiError?.StatusDescription, apiError?.Message);
-            return;
-        }
         var result = await response.Content.ReadFromJsonAsync<bool>();
 
         emailExists = result;
+
+        await Email.Validate();
     }
 
-    private async Task OnUsernameChanged(ChangeEventArgs args)
+    private async Task OnUsernameChanged(KeyboardEventArgs args)
     {
-        var value = args.Value?.ToString();
-        var response = await HttpClient.GetAsync($"account/username/{value}");
-
-        if (!response.IsSuccessStatusCode)
-        {
-            var apiError = await response.Content.ReadFromJsonAsync<ApiError>();
-            await NotificationManager.AddToast(apiError?.StatusDescription, apiError?.Message);
+        var value = Username.Value;
+        if (value.Length < 4 || value.Length > 15)
             return;
-        }
+
+        var response = await HttpClient.GetAsync($"account/username/{value}");
 
         var result = await response.Content.ReadFromJsonAsync<bool>();
 
         usernameExists = result;
-    }
 
-    public void Dispose()
-    {
-        _editContext.OnFieldChanged -= CheckFields;
+        await Username.Validate();
     }
 
 }

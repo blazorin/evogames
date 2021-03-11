@@ -4,6 +4,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
@@ -34,17 +35,24 @@ namespace Server.Controllers
              * Previous checks
              */
 
+            #region Login Checks
+
             if (User?.Identity != null && User.Identity.IsAuthenticated)
                 return Forbid();
 
             if (string.IsNullOrWhiteSpace(credentials.Email) || string.IsNullOrWhiteSpace(credentials.Password))
                 return Unauthorized(new UnauthorizedError("email_or_password_blank"));
 
+            if (credentials.Email.Length > 100 || !CheckValidEmail.Validate(credentials.Email))
+                return Unauthorized(new UnauthorizedError("email_invalid"));
+
             var user = await _userServices.GetUserByAuthenticationAsync(credentials);
             if (user == null)
                 return Unauthorized(new UnauthorizedError("email_or_password_incorrect"));
 
             // TODO: Verificaciones de seguridad adicionales
+
+            #endregion
 
             /*
              * If all ok, Continues here
@@ -61,39 +69,62 @@ namespace Server.Controllers
              * Previous checks
              */
 
+            #region Register Checks
+
             if (User?.Identity != null && User.Identity.IsAuthenticated)
                 return Forbid();
 
             if (string.IsNullOrWhiteSpace(newUser.Email) || string.IsNullOrWhiteSpace(newUser.Password))
                 return Unauthorized(new UnauthorizedError("email_or_password_blank"));
 
-            if (string.IsNullOrEmpty(newUser.Name) || newUser.Name.Length < 4)
+            if (string.IsNullOrWhiteSpace(newUser.Name) || newUser.Name.Length < 4)
                 return Unauthorized(new UnauthorizedError("username_too_small"));
+
+            if (newUser.Name.Length > 15)
+                return Unauthorized(new UnauthorizedError("username_too_big"));
+
+            if (newUser.Email.Length > 100 || !CheckValidEmail.Validate(newUser.Email))
+                return Unauthorized(new UnauthorizedError("email_invalid"));
 
             // Check email if registered
             var emailRegistered = await _userServices.EmailExistsAsync(newUser.Email);
             if (emailRegistered)
                 return Unauthorized(new UnauthorizedError("email_already_used"));
 
-            // Check user if registered
+            // Check username regex
+            if (!newUser.Name.All(char.IsLetterOrDigit))
+                return Unauthorized(new UnauthorizedError("username_symbols"));
+            
+            // Check username if registered
             var userRegistered = await _userServices.UsernameExistsAsync(newUser.Name);
             if (userRegistered)
                 return Unauthorized(new UnauthorizedError("username_already_used"));
 
             // Check if +18
-            var isMajorAje = newUser.Birth.Year + 18 < DateTime.Now.Year;
-            if (newUser.Birth == DateTime.MinValue || newUser.Birth.Year < DateTime.Now.Year - 100 || !isMajorAje)
+            var notMajorAje = DateTime.Compare(newUser.Birth.AddYears(18), DateTime.Now) == 1;
+            
+            if (newUser.Birth == DateTime.MinValue || newUser.Birth.Year < DateTime.Now.Year - 100 || notMajorAje)
                 return Unauthorized(new UnauthorizedError("not_major_age"));
 
             // Check if username is blacklisted
-            var blackList = (IEnumerable<string>) BlackList.Names;
-            if (blackList.Any(name => name == newUser.Name))
+            if (BlackList.Names.Any(name => name == newUser.Name))
                 return Unauthorized(new UnauthorizedError("username_blacklisted"));
 
             // Check if country is allowed
             if (!Enum.IsDefined(typeof(BlackList.Countries), newUser.Country))
                 return Unauthorized(new UnauthorizedError("country_not_allowed"));
+            
+            // Check password strength
+            if (newUser.Password.Length < 8)
+                return Unauthorized(new UnauthorizedError("password_short"));
+            if (!Regex.IsMatch(newUser.Password, @"[A-Z]"))
+                return Unauthorized(new UnauthorizedError("password_must_one_capital"));
+            if (!Regex.IsMatch(newUser.Password, @"[a-z]"))
+                return Unauthorized(new UnauthorizedError("password_must_one_lowercase"));
+            if (!Regex.IsMatch(newUser.Password, @"[0-9]"))
+                return Unauthorized(new UnauthorizedError("password_must_one_digit"));
 
+            #endregion
 
             /*
              * If all ok, Continues here
@@ -125,8 +156,8 @@ namespace Server.Controllers
             // Claims are not supported to be sent in JSON (no default constructor), so I've made this workaround
             var policiesInClaims = new List<Claim>();
             policiesInClaims.AddRange(user.Perms.Select(perm => new Claim(perm.PermKey, perm.PermValue)));
-            
-            var policiesInString = 
+
+            var policiesInString =
                 user.Perms.ToDictionary(perm => perm.PermKey, perm => perm.PermValue);
 
             var roles = new List<string>();
@@ -139,7 +170,7 @@ namespace Server.Controllers
                 roles.Add("admin");
             if (user.IsModerator)
                 roles.Add("moderator");
-            
+
 
             var response = new UserData
             {

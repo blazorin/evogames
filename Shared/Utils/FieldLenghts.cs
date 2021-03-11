@@ -9,7 +9,7 @@ namespace Shared.Utils
             public const int Password = 80;
             public const int Address = 120;
             public const int City = 30;
-            public const int Country = 40;
+            public const int Country = 2;
             public const int State = 40;
             public const int ZipCode = 6;
         }

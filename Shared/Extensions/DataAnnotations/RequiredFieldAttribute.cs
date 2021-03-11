@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace Client.Extensions.DataAnnotations
+namespace Shared.Extensions.DataAnnotations
 {
     public class RequiredFieldAttribute : RequiredAttribute
     {
