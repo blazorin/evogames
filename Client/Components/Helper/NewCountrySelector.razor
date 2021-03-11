@@ -1,0 +1,26 @@
+<MudItem xs="12" sm="6" md="4">
+    <MudSelect T="string" Value="Country" ValueChanged="@(async (country) => await CountryChanged.InvokeAsync(country))" Label="Country" Variant="Variant.Outlined" OffsetY="true" Required="true" RequiredError="Country is required">
+        <MudSelectItem Value="@("AF")">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/9/9a/Flag_of_Afghanistan.svg" height="14" class="mr-1"/> Afghanistan
+        </MudSelectItem>
+        <MudSelectItem Value="@("AU")">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/8/88/Flag_of_Australia_%28converted%29.svg" height="14" class="mr-1"/> Australia
+        </MudSelectItem>
+        <MudSelectItem Value="@("AT")">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/4/41/Flag_of_Austria.svg" height="14" class="mr-1"/> Austria
+        </MudSelectItem>
+        <MudSelectItem Value="@("ES")">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/8/89/Bandera_de_Espa%C3%B1a.svg" height="14" class="mr-1"/> Spain
+        </MudSelectItem>
+    </MudSelect>
+</MudItem>
+
+@code {
+
+    [Parameter]
+    public string Country { get; set; }
+
+    [Parameter]
+    public EventCallback<string> CountryChanged { get; set; }
+
+}
