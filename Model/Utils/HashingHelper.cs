@@ -1,3 +1,4 @@
+using System;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -18,6 +19,14 @@ namespace Model.Utils
 
                 return builder.ToString();
             }
+        }
+
+        public static int GenerateRandomNo()
+        {
+            int _min = 0000;
+            int _max = 9999;
+            Random _rdm = new Random();
+            return _rdm.Next(_min, _max);
         }
     }
 }
