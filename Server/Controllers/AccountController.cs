@@ -6,6 +6,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using Model.Data;
@@ -14,6 +15,11 @@ using Shared;
 using Shared.ApiErrors;
 using Shared.Dto;
 using Shared.Utils;
+using Google.Apis.Auth;
+using Model.Enums;
+using Model.Utils;
+using Shared.Enums;
+using Shared.Oauth;
 
 namespace Server.Controllers
 {
@@ -22,10 +28,12 @@ namespace Server.Controllers
     public class AccountController : ControllerBase
     {
         private readonly IUserServices _userServices;
+        private IConfiguration _configuration { get; }
 
-        public AccountController(IUserServices userServices)
+        public AccountController(IUserServices userServices, IConfiguration configuration)
         {
             _userServices = userServices;
+            _configuration = configuration;
         }
 
         [HttpPost("login")]
@@ -46,7 +54,7 @@ namespace Server.Controllers
             if (credentials.Email.Length > 100 || !CheckValidEmail.Validate(credentials.Email))
                 return Unauthorized(new UnauthorizedError("email_invalid"));
 
-            var user = await _userServices.GetUserByAuthenticationAsync(credentials);
+            var user = await _userServices.GetUserByAuthenticationAsync(credentials, UserLogType.Login);
             if (user == null)
                 return Unauthorized(new UnauthorizedError("email_or_password_incorrect"));
 
@@ -94,7 +102,7 @@ namespace Server.Controllers
             // Check username regex
             if (!newUser.Name.All(char.IsLetterOrDigit))
                 return Unauthorized(new UnauthorizedError("username_symbols"));
-            
+
             // Check username if registered
             var userRegistered = await _userServices.UsernameExistsAsync(newUser.Name);
             if (userRegistered)
@@ -102,7 +110,7 @@ namespace Server.Controllers
 
             // Check if +18
             var notMajorAje = DateTime.Compare(newUser.Birth.AddYears(18), DateTime.Now) == 1;
-            
+
             if (newUser.Birth == DateTime.MinValue || newUser.Birth.Year < DateTime.Now.Year - 100 || notMajorAje)
                 return Unauthorized(new UnauthorizedError("not_major_age"));
 
@@ -113,7 +121,7 @@ namespace Server.Controllers
             // Check if country is allowed
             if (!Enum.IsDefined(typeof(BlackList.Countries), newUser.Country))
                 return Unauthorized(new UnauthorizedError("country_not_allowed"));
-            
+
             // Check password strength
             if (newUser.Password.Length < 8)
                 return Unauthorized(new UnauthorizedError("password_short"));
@@ -130,12 +138,46 @@ namespace Server.Controllers
              * If all ok, Continues here
              */
 
-            var user = await _userServices.AddUserAsync(newUser);
+            var user = await _userServices.AddUserAsync(newUser, UserLogType.SignUp);
 
             var userData = HandleGenerateToken(user);
             return Ok(userData);
         }
 
+        /* Oauth Web API Calls */
+
+        [HttpPost("oauth/google")]
+        public async Task<IActionResult> GoogleOauth(GoogleLoginRequest request)
+        {
+            GoogleJsonWebSignature.Payload payload;
+            try
+            {
+                payload = await GoogleJsonWebSignature.ValidateAsync(request.IdToken,
+                    new GoogleJsonWebSignature.ValidationSettings
+                    {
+                        Audience = new[] {_configuration["Authentication:Google:ClientId"]}
+                    });
+
+                // It is important to add your ClientId as an audience in order to make sure
+                // that the token is for Evo.Games!
+            }
+            catch
+            {
+                return Unauthorized(new UnauthorizedError("google_invalid_token"));
+            }
+
+            OAuthUserCredentials credentials = new()
+            {
+                Email = payload.Email,
+                Username = payload.Email.Substring(0, payload.Email.IndexOf("@", StringComparison.Ordinal)
+                ).Replace(".", string.Empty).Replace("-", string.Empty)
+            };
+
+            var user = await _userServices.HandleOauthAuthenticationAsync(credentials, OauthType.Google);
+
+            var userData = HandleGenerateToken(user);
+            return Ok(userData);
+        }
 
         [HttpGet("email/{email?}")]
         public async Task<IActionResult> CheckEmail(string email)
