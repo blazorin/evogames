@@ -21,6 +21,7 @@
             </MudForm>
         </MudCardContent>
         <MudCardActions>
+            <GoogleButtonPopUp ReturnUrl="@returnUrl"></GoogleButtonPopUp>
             <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!isValid || isLoging)" Class="ml-auto" OnClick="HandleLogin">Login</MudButton>
         </MudCardActions>
     </MudCard>

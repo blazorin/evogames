@@ -1,0 +1,78 @@
+@inject IJSRuntime JsRuntime
+@inject HttpClient HttpClient
+@using global::Shared.Oauth
+@using Client.Extensions.Authentication
+@implements IDisposable
+@inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
+
+
+<div class="g-signin2" data-onsuccess="onSignIn"></div>
+
+
+@code {
+
+    [Parameter]
+    public string ReturnUrl { get; set; }
+
+    DotNetObjectReference<GoogleButtonPopUp> _reference;
+
+    bool _canSendReference;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await JsRuntime.InvokeVoidAsync("loadScript", "./js/googleAuth.js");
+        _canSendReference = true;
+
+        await JsRuntime.InvokeVoidAsync("loadScriptDefer", "https://apis.google.com/js/platform.js");
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+            await CreateAndSendReference();
+    }
+
+    async Task CreateAndSendReference()
+    {
+    // We create the reference to the actual component..
+        _reference = DotNetObjectReference.Create(this);
+
+    // and then we send it to EvoGoogleState
+        while (_canSendReference != true)
+            await Task.Delay(1);
+
+        await JsRuntime.InvokeVoidAsync("evoGoogleState.initialize", _reference);
+    }
+
+    /// Called by evoGoogleState.callEvoServer
+    [JSInvokable]
+    public async Task ReceiveGoogleIdToken(string token)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+            return;
+
+        var response = await HttpClient.PostAsJsonAsync("account/oauth/google", new GoogleLoginRequest() {IdToken = token});
+        if (!response.IsSuccessStatusCode)
+        {
+            var apiError = await response.Content.ReadFromJsonAsync<ApiError>();
+            Snackbar.Add(apiError?.Message, Severity.Error);
+        }
+
+        var userData = await response.Content.ReadFromJsonAsync<UserData>();
+
+        if (userData == null)
+            NavigationManager.NavigateTo(NavigationManager.Uri, true);
+
+        await ((CustomAuthenticationStateProvider) AuthenticationStateProvider).SetCurrentUserAsync(userData);
+
+        NavigationManager.NavigateTo(ReturnUrl ?? "");
+    }
+
+    public void Dispose()
+    {
+        _reference?.Dispose();
+    }
+
+}

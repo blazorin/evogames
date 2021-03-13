@@ -36,6 +36,7 @@
             </MudForm>
         </MudCardContent>
         <MudCardActions>
+            <GoogleButtonPopUp ReturnUrl="@returnUrl"></GoogleButtonPopUp>
             <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!isValid || isCreating)" Class="ml-auto" OnClick="CreateAccount">Register</MudButton>
         </MudCardActions>
     </MudCard>
