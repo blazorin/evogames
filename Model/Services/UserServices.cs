@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Model.Data;
+using Model.Enums;
 using Model.Utils;
 using Shared;
 using Shared.Dto;
@@ -23,27 +24,40 @@ namespace Model.Services
             _mapper = mapper;
         }
 
-        public async Task<User> GetUserByAuthenticationAsync(UserCredentials credentials)
+        public async Task<User> GetUserByAuthenticationAsync(UserCredentials credentials, UserLogType logType)
         {
-            var passwordHashed = HashingHelper.ComputeSha256Hash(credentials.Password);
+            User storedUser;
 
-            var storedUser = await _ctx.Users
-                .Where(user => user.Email == credentials.Email && user.PasswordHashed == passwordHashed)
-                .Include(user => user.Logs)
-                .Include(user => user.Perms)
-                .FirstOrDefaultAsync();
+            if (logType == UserLogType.GoogleLogin || logType == UserLogType.DiscordLogin)
+            {
+                storedUser = await _ctx.Users
+                    .Where(user => user.Email == credentials.Email)
+                    .Include(user => user.Logs)
+                    .Include(user => user.Perms)
+                    .FirstOrDefaultAsync();
+            }
+            else
+            {
+                var passwordHashed = HashingHelper.ComputeSha256Hash(credentials.Password);
+                storedUser = await _ctx.Users
+                    .Where(user => user.Email == credentials.Email && user.PasswordHashed == passwordHashed)
+                    .Include(user => user.Logs)
+                    .Include(user => user.Perms)
+                    .FirstOrDefaultAsync();
+            }
+
             if (storedUser == null)
                 return null;
 
             storedUser.LastLogin = DateTime.Now;
             storedUser.Logs.Add(new UserLog
-                {Date = DateTime.Now, UserLogId = Guid.NewGuid().ToString() + Guid.NewGuid(), UserLogType = UserLogType.Login});
+                {Date = DateTime.Now, UserLogId = Guid.NewGuid().ToString() + Guid.NewGuid(), UserLogType = logType});
             await _ctx.SaveChangesAsync();
 
             return storedUser;
         }
 
-        public async Task<User> AddUserAsync(NewUserDto newUserDto)
+        public async Task<User> AddUserAsync(NewUserDto newUserDto, UserLogType logType)
         {
             var user = _mapper.Map<User>(newUserDto);
 
@@ -51,7 +65,7 @@ namespace Model.Services
             {
                 new()
                 {
-                    Date = DateTime.Now, UserLogType = UserLogType.SignUp, UserLogId = Guid.NewGuid().ToString() + Guid.NewGuid()
+                    Date = DateTime.Now, UserLogType = logType, UserLogId = Guid.NewGuid().ToString() + Guid.NewGuid()
                 }
             };
 
@@ -66,13 +80,73 @@ namespace Model.Services
             user.UserId = Guid.NewGuid().ToString();
             user.CreationDate = DateTime.Now;
             user.LastLogin = DateTime.Now;
-            user.PasswordHashed = HashingHelper.ComputeSha256Hash(newUserDto.Password);
+
+            if (logType == UserLogType.SignUp)
+                user.PasswordHashed = HashingHelper.ComputeSha256Hash(newUserDto.Password);
 
 
             await _ctx.Users.AddAsync(user);
             await _ctx.SaveChangesAsync();
 
             return user;
+        }
+
+        public async Task<User> HandleOauthAuthenticationAsync(OAuthUserCredentials oauthCredentials,
+            OauthType oauthType)
+        {
+            var emailExists = await EmailExistsAsync(oauthCredentials.Email);
+            if (emailExists)
+            {
+                var userCredentials = new UserCredentials
+                {
+                    Email = oauthCredentials.Email
+                };
+
+                var loginLogType = oauthType switch
+                {
+                    OauthType.Google => UserLogType.GoogleLogin,
+                    OauthType.Discord => UserLogType.DiscordLogin
+                };
+
+                return await GetUserByAuthenticationAsync(userCredentials, loginLogType);
+            }
+
+            string username = oauthCredentials.Username.Length switch
+            {
+                > 15 => oauthCredentials.Username.Substring(0, 15),
+                _ => oauthCredentials.Username
+            };
+
+            string usernameBase = username;
+            int count = 0;
+            while (await UsernameExistsAsync(username))
+            {
+                username = (usernameBase.Length > 11 ? usernameBase.Substring(0, 11) : usernameBase) +
+                           HashingHelper.GenerateRandomNo();
+                count++;
+
+                // I hope this won't happen :)
+                if (count >= 5000)
+                {
+                    username = "goofy" + HashingHelper.GenerateRandomNo() + HashingHelper.GenerateRandomNo();
+                    // maybe add alert here, in the future
+                    break;
+                }
+            }
+
+            var newUser = new NewUserDto
+            {
+                Name = username,
+                Email = oauthCredentials.Email
+            };
+
+            var registerLogType = oauthType switch
+            {
+                OauthType.Google => UserLogType.GoogleSignUp,
+                OauthType.Discord => UserLogType.DiscordSignUp
+            };
+
+            return await AddUserAsync(newUser, registerLogType);
         }
 
         public async Task<bool> EmailExistsAsync(string email)
