@@ -105,7 +105,8 @@ namespace Model.Services
                 var loginLogType = oauthType switch
                 {
                     OauthType.Google => UserLogType.GoogleLogin,
-                    OauthType.Discord => UserLogType.DiscordLogin
+                    OauthType.Discord => UserLogType.DiscordLogin,
+                    _ => throw new ArgumentOutOfRangeException(nameof(oauthType), oauthType, null)
                 };
 
                 return await GetUserByAuthenticationAsync(userCredentials, loginLogType);
@@ -125,10 +126,10 @@ namespace Model.Services
                            HashingHelper.GenerateRandomNo();
                 count++;
 
-    
+
                 if (count < 5000) continue;
                 // I hope this won't happen :)
-                
+
                 username = "goofy" + HashingHelper.GenerateRandomNo() + HashingHelper.GenerateRandomNo();
                 // maybe add alert here, in the future
                 break;
@@ -143,7 +144,8 @@ namespace Model.Services
             var registerLogType = oauthType switch
             {
                 OauthType.Google => UserLogType.GoogleSignUp,
-                OauthType.Discord => UserLogType.DiscordSignUp
+                OauthType.Discord => UserLogType.DiscordSignUp,
+                _ => throw new ArgumentOutOfRangeException(nameof(oauthType), oauthType, null)
             };
 
             return await AddUserAsync(newUser, registerLogType);
