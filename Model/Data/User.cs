@@ -20,12 +20,12 @@ namespace Model.Data
 
         public string PasswordHashed { get; set; }
 
-        [Required] public DateTime Birth { get; set; }
+        public DateTime Birth { get; set; }
 
         public DateTime CreationDate { get; set; }
         public DateTime LastLogin { get; set; }
 
-        [Required, StringLength(FieldLenghts.User.Country), MinLength(2)]
+
         public string Country { get; set; }
 
         public Language Language { get; set; }
