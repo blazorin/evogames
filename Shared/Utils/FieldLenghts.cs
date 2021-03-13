@@ -4,7 +4,7 @@ namespace Shared.Utils
     {
         public static class User
         {
-            public const int Name = 20;
+            public const int Name = 15;
             public const int Mail = 100;
             public const int Password = 80;
             public const int Address = 120;
