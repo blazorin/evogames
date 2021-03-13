@@ -9,6 +9,6 @@ namespace Shared
         [RequiredField, FieldLength(FieldLenghts.User.Mail), EmailAddress(ErrorMessage = "Invalid email address")]
         public string Email { get; set; }
 
-        [RequiredField] public string Password { get; set; }
+        public string Password { get; set; }
     }
 }
