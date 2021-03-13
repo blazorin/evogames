@@ -125,13 +125,13 @@ namespace Model.Services
                            HashingHelper.GenerateRandomNo();
                 count++;
 
+    
+                if (count < 5000) continue;
                 // I hope this won't happen :)
-                if (count >= 5000)
-                {
-                    username = "goofy" + HashingHelper.GenerateRandomNo() + HashingHelper.GenerateRandomNo();
-                    // maybe add alert here, in the future
-                    break;
-                }
+                
+                username = "goofy" + HashingHelper.GenerateRandomNo() + HashingHelper.GenerateRandomNo();
+                // maybe add alert here, in the future
+                break;
             }
 
             var newUser = new NewUserDto
