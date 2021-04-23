@@ -4,7 +4,7 @@ function onSignIn(googleUser) {
 
     setTimeout(() => {
         window.gapi.auth2.getAuthInstance().disconnect();
-    }, 2500);
+    }, 3500);
 }
 
 window.evoGoogleState = (function () {
