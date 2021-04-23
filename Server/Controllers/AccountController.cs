@@ -48,6 +48,8 @@ namespace Server.Controllers
             if (User?.Identity != null && User.Identity.IsAuthenticated)
                 return Forbid();
 
+            //TODO: Recaptcha
+
             if (string.IsNullOrWhiteSpace(credentials.Email) || string.IsNullOrWhiteSpace(credentials.Password))
                 return Unauthorized(new UnauthorizedError("email_or_password_blank"));
 
@@ -109,9 +111,12 @@ namespace Server.Controllers
                 return Unauthorized(new UnauthorizedError("username_already_used"));
 
             // Check if +18
-            var notMajorAje = DateTime.Compare(newUser.Birth.AddYears(18), DateTime.Now) == 1;
+            if (newUser.Birth == null)
+                return Unauthorized(new UnauthorizedError("birth_empty"));
 
-            if (newUser.Birth == DateTime.MinValue || newUser.Birth.Year < DateTime.Now.Year - 100 || notMajorAje)
+            var notMajorAje = DateTime.Compare(newUser.Birth.Value.AddYears(18), DateTime.Now) == 1;
+
+            if (newUser.Birth.Value.Year < DateTime.Now.Year - 100 || notMajorAje)
                 return Unauthorized(new UnauthorizedError("not_major_age"));
 
             // Check if username is blacklisted
@@ -149,6 +154,9 @@ namespace Server.Controllers
         [HttpPost("oauth/google")]
         public async Task<IActionResult> GoogleOauth(GoogleLoginRequest request)
         {
+            if (User?.Identity != null && User.Identity.IsAuthenticated)
+                return Forbid();
+
             GoogleJsonWebSignature.Payload payload;
             try
             {
@@ -174,6 +182,8 @@ namespace Server.Controllers
             };
 
             var user = await _userServices.HandleOauthAuthenticationAsync(credentials, OauthType.Google);
+            if (user == null)
+                return Unauthorized(new UnauthorizedError("google_oauth_error"));
 
             var userData = HandleGenerateToken(user);
             return Ok(userData);
