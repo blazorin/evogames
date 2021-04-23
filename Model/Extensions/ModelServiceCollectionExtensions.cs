@@ -1,4 +1,5 @@
 using AutoMapper;
+using AutoMapper.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Model.Data;
 using Model.Mapping;
@@ -22,6 +23,7 @@ namespace Model.Extensions
 
             //User
             services.AddScoped<IUserServices, UserServices>();
+            services.AddScoped<IProfileServices, ProfileServices>();
 
             return services;
         }
