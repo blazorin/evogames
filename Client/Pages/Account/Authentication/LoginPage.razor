@@ -5,17 +5,16 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject ISnackbar Snackbar
 
-<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-16">
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
     <MudCard>
         <MudCardContent>
             <MudForm @bind-IsValid="@isValid">
                 <MudTextField T="string" Label="Email" Required="true" Immediate="true" RequiredError="Email is required" HelperText="Your current email"
                               Validation="@(new Func<string, IEnumerable<string>>(CheckEmail))" @ref="                                            Email"/>
-                <MudTextField T="string" Label="Password" Required="true"
+                <MudTextField T="string" Label="Password" HelperText="Your current password" InputType="@_passwordInput" Adornment="Adornment.End" AdornmentIcon="@_passwordInputIcon" OnAdornmentClick="PasswordEye"
+                              Required="true"
                               RequiredError="Password is required"
-                              HelperText="Your current password"
                               Immediate="true"
-                              InputType="InputType.Password"
                               Validation="@(new Func<string, IEnumerable<string>>(CheckPassword))"
                               @ref="                                            Password"/>
             </MudForm>
@@ -35,6 +34,10 @@
 
     MudTextField<string> Email;
     MudTextField<string> Password;
+
+    bool _isPasswordShown;
+    InputType _passwordInput = InputType.Password;
+    string _passwordInputIcon = Icons.Material.Filled.VisibilityOff;
 
     protected override async Task OnInitializedAsync()
     {
@@ -102,6 +105,22 @@
         await ((CustomAuthenticationStateProvider) AuthenticationStateProvider).SetCurrentUserAsync(userData);
 
         NavigationManager.NavigateTo(returnUrl ?? "");
+    }
+
+    private void PasswordEye()
+    {
+        if (_isPasswordShown)
+        {
+            _isPasswordShown = false;
+            _passwordInputIcon = Icons.Material.Filled.VisibilityOff;
+            _passwordInput = InputType.Password;
+        }
+        else
+        {
+            _isPasswordShown = true;
+            _passwordInputIcon = Icons.Material.Filled.Visibility;
+            _passwordInput = InputType.Text;
+        }
     }
 
 }
