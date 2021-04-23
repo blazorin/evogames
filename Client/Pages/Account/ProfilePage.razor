@@ -1,0 +1,144 @@
+@page "/account/profile"
+@using Client.Extensions.Authentication
+@using Client.Components.Helper
+@using System.Globalization
+@using System.Runtime.Serialization
+@implements IDisposable
+@inject IDialogService DialogService
+@inject HttpClient HttpClient
+@inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<MudContainer MaxWidth="MaxWidth.Large">
+
+    @if (!userEditingUsername)
+    {
+        <MudTextField T="string" Style="color: black" Label="Username" HelperText="You can change it one time only" Value="_userName" DisableUnderLine Adornment="Adornment.End" AdornmentIcon="@(Icons.Material.Filled.Edit)" OnAdornmentClick="@(() => userEditingUsername = !userEditingUsername)"/>
+    }
+    else
+    {
+        <MudTextField T="string" Label="Username" HelperText="You can change it one time only" Value="_userName" Adornment="Adornment.End" AdornmentIcon="@(Icons.Material.Filled.Edit)" OnAdornmentClick="@(() => userEditingUsername = !userEditingUsername)"/>
+    }
+    <MudTextField T="string" Style="color: black" Label="Email" Value="_userProfile.Email" DisableUnderLine Disabled/>
+    <MudContainer Class="mt-2"/>
+
+    @if (userEditingBirth)
+    {
+        <MudGrid Style="margin-left: 0;" Class="position-relative">
+            <MudDatePicker DateFormat="dd-MM-yyyy" Label="Birth" HelperText="Enter your Birth Date" Validation="@(new Func<DateTime?, string>(CheckAge))" Adornment="Adornment.End" Date="@(_storedTime ?? new(DateTime.Now.Year - 18, DateTime.Now.Month, DateTime.Now.Day))" DateChanged="UpdateBirth"/>
+            <MudIconButton Icon="@Icons.Filled.Close" OnClick="@(() => userEditingBirth = false)" Class="position-absolute"></MudIconButton>
+        </MudGrid>
+    }
+    else
+    {
+        if (_userProfile.Birth != null)
+        {
+            <MudTextField T="string" Style="color: black" Label="Birth" Value="BirthText()" DisableUnderLine Adornment="Adornment.End" AdornmentIcon="@(Icons.Material.Filled.Edit)" OnAdornmentClick="@(() => userEditingBirth = true)"/>
+        }
+        else
+        {
+            <MudButton Color="Color.Primary" Variant="Variant.Filled" Size="Size.Small" OnClick="@(() => userEditingBirth = true)">
+                <MudText Typo="Typo.h6" Style="text-transform: none">Set Birth</MudText>
+            </MudButton>
+        }
+    }
+
+
+    <MudContainer Class="mt-3"/>
+    <NewCountrySelector @bind-Country="@_userProfile.Country"/>
+
+</MudContainer>
+
+
+@code {
+
+    UserProfileDto _userProfile { get; set; } = new();
+    string _userName { get; set; }
+    bool isLoading;
+    bool userEditingUsername;
+    bool userEditingBirth;
+
+    DateTime? _storedTime;
+
+    private void OpenDialog()
+    {
+        DialogService.Show<ChangeUsernameDialog>("Change Password Dialog");
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+    // We have the username stored, let's use it instead of fetching from API, right?
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        _userName = authState.User?.Identity?.Name;
+
+        AuthenticationStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+
+        var response = await HttpClient.GetAsync("profile/me");
+        if (!response.IsSuccessStatusCode)
+        {
+            var apiError = await response.Content.ReadFromJsonAsync<ApiError>();
+            Snackbar.Add(apiError?.Message, Severity.Error);
+            return;
+        }
+        _userProfile = await response.Content.ReadFromJsonAsync<UserProfileDto>();
+        _storedTime = _userProfile.Birth;
+    }
+
+    private async void OnAuthenticationStateChanged(Task<AuthenticationState> authStateTask)
+    {
+        var authState = await authStateTask;
+        _userName = authState.User?.Identity?.Name;
+        StateHasChanged();
+    }
+
+    private static string CheckAge(DateTime? arg)
+    {
+        return arg != null && (DateTime.Compare(arg.Value.AddYears(18), DateTime.Now) == 1 || arg.Value.Year < DateTime.Now.Year - 100) ? "You need to be major of age to play" : null;
+    }
+
+    private async Task UpdateBirth(DateTime? date)
+    {
+        if (date == null)
+            return;
+        
+        _storedTime = date;
+
+        if (CheckAge(date) == null)
+        {
+            var response = await HttpClient.PostAsJsonAsync("profile/birth", new UpdateProfileBirth(date));
+            if (!response.IsSuccessStatusCode)
+            {
+                var apiError = await response.Content.ReadFromJsonAsync<ApiError>();
+                Snackbar.Add(apiError?.Message, Severity.Error);
+                return;
+            }
+
+            _userProfile.Birth = date;
+            userEditingBirth = false;
+            Snackbar.Add("Birth updated successfully", Severity.Success);
+        }
+    }
+
+    private string BirthText()
+    {
+        DateTime date = _userProfile.Birth.Value;
+
+        bool dayNeedsZero = date.Day.ToString().Length == 1;
+        bool monthNeedsZero = date.Month.ToString().Length == 1;
+
+        if (dayNeedsZero && monthNeedsZero)
+            return $"0{date.Day}/0{date.Month}/{date.Year}";
+        if (dayNeedsZero)
+            return $"0{date.Day}/{date.Month}/{date.Year}";
+        if (monthNeedsZero)
+            return $"{date.Day}/0{date.Month}/{date.Year}";
+
+        return $"{date.Day}/{date.Month}/{date.Year}";
+    }
+
+    public void Dispose()
+    {
+        AuthenticationStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+    }
+
+}
