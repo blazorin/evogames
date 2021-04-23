@@ -40,7 +40,7 @@
     // We create the reference to the actual component..
         _reference = DotNetObjectReference.Create(this);
 
-    // and then we send it to EvoGoogleState
+    // and then we send it to EvoGoogleState when both scripts are loaded
         while (_canSendReference != true)
             await Task.Delay(1);
 
@@ -59,12 +59,16 @@
         {
             var apiError = await response.Content.ReadFromJsonAsync<ApiError>();
             Snackbar.Add(apiError?.Message, Severity.Error);
+            return;
         }
 
         var userData = await response.Content.ReadFromJsonAsync<UserData>();
 
         if (userData == null)
-            NavigationManager.NavigateTo(NavigationManager.Uri, true);
+        {
+            NavigationManager.NavigateTo(NavigationManager.ToBaseRelativePath(NavigationManager.Uri), true);
+            return;
+        }
 
         await ((CustomAuthenticationStateProvider) AuthenticationStateProvider).SetCurrentUserAsync(userData);
 
