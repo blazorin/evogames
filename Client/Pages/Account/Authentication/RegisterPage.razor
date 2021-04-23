@@ -7,28 +7,31 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject ISnackbar Snackbar
 
-<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-16">
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
     <MudCard>
         <MudCardContent>
             <MudForm @bind-IsValid="@isValid">
                 <MudTextField T="string" Label="Email" Required="true" Immediate="true" RequiredError="Email is required"
-                              Validation="@(new Func<string, IEnumerable<string>>(CheckEmail))" OnKeyUp="OnEmailChanged" @ref="                                            Email"/>
+                              Validation="@(new Func<string, IEnumerable<string>>(CheckEmail))" OnKeyUp="OnEmailChanged" @ref="Email"/>
                 <MudTextField T="string" Label="Username" HelperText="Letters and numbers allowed" Required="true" Immediate="true"
-                              RequiredError="Username is required" Validation="@(new Func<string, IEnumerable<string>>(CheckUsername))" @ref="                                            Username" OnKeyUp="OnUsernameChanged"/>
-                <MudTextField T="string" Label="Password" HelperText="Choose a strong password" Required="true"
+                              RequiredError="Username is required" Validation="@(new Func<string, IEnumerable<string>>(CheckUsername))" @ref="Username" OnKeyUp="OnUsernameChanged"/>
+                <MudTextField T="string" Label="Password" HelperText="Choose a strong password" InputType="@_passwordInput" Adornment="Adornment.End" AdornmentIcon="@_passwordInputIcon" OnAdornmentClick="PasswordEye"
+                              Required="true"
                               RequiredError="Password is required"
                               Immediate="true"
-                              InputType="InputType.Password"
                               Validation="@(new Func<string, IEnumerable<string>>(PasswordStrength))"
-                              @ref="                                            Password"/>
+                              @ref="Password"/>
                 <MudTextField T="string"
-                              Label="Password" HelperText="Repeat the password" Required="true" RequiredError="Repeat your password" InputType="InputType.Password"
+                              Label="Password" HelperText="Repeat the password" InputType="@_passwordInput" Adornment="Adornment.End" AdornmentIcon="@_passwordInputIcon" OnAdornmentClick="PasswordEye"
+                              Required="true"
+                              RequiredError="Repeat your password"
+                              Immediate="true"
                               Validation="@(new Func<string, string>(PasswordMatch))"
-                              @ref="                                            PasswordRepeat"/>
+                              @ref="PasswordRepeat"/>
 
                 <MudItem xs="12" sm="6" md="4">
                     @*This should use the current UI Culture, by default *@
-                    <MudDatePicker Label="Birth" @bind-Date="@Birth" HelperText="Enter your Birth Date" Validation="@(new Func<DateTime?, string>(CheckAge))"></MudDatePicker>
+                    <MudDatePicker DateFormat="dd-MM-yyyy" Label="Birth" @bind-Date="@Birth" HelperText="Enter your Birth Date" Validation="@(new Func<DateTime?, string>(CheckAge))"></MudDatePicker>
                 </MudItem>
                 <NewCountrySelector @bind-Country="@Country"></NewCountrySelector>
                 <MudCheckBox T="bool" Required="true" RequiredError="You must agree" Class="ml-n2"
@@ -36,7 +39,7 @@
             </MudForm>
         </MudCardContent>
         <MudCardActions>
-            <GoogleButtonPopUp ReturnUrl="@returnUrl"></GoogleButtonPopUp>
+            <GoogleButtonPopUp ReturnUrl="@returnUrl" CalledFromRegister></GoogleButtonPopUp>
             <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!isValid || isCreating)" Class="ml-auto" OnClick="CreateAccount">Register</MudButton>
         </MudCardActions>
     </MudCard>
@@ -56,6 +59,10 @@
     MudTextField<string> Password;
     MudTextField<string> PasswordRepeat;
     DateTime? Birth = new(DateTime.Now.Year - 18, DateTime.Now.Month, DateTime.Now.Day);
+
+    bool _isPasswordShown;
+    InputType _passwordInput = InputType.Password;
+    string _passwordInputIcon = Icons.Material.Filled.VisibilityOff;
 
     protected override async Task OnInitializedAsync()
     {
@@ -116,9 +123,9 @@
             yield return "Username does not accept symbols";
     }
 
-    private string CheckAge(DateTime? arg)
+    private static string CheckAge(DateTime? arg)
     {
-        return DateTime.Compare(arg.Value.AddYears(18), DateTime.Now) == 1 ? "You need to be major of age to play" : null;
+        return arg != null && (DateTime.Compare(arg.Value.AddYears(18), DateTime.Now) == 1 || arg.Value.Year < DateTime.Now.Year - 100) ? "You need to be major of age to play" : null;
     }
 
     private IEnumerable<string> PasswordStrength(string pw)
@@ -177,7 +184,7 @@
         var userData = await response.Content.ReadFromJsonAsync<UserData>();
         if (userData == null)
         {
-            NavigationManager.NavigateTo("/register", true);
+            NavigationManager.NavigateTo("register", true);
             return;
         }
 
@@ -215,6 +222,22 @@
         usernameExists = result;
 
         await Username.Validate();
+    }
+
+    private void PasswordEye()
+    {
+        if (_isPasswordShown)
+        {
+            _isPasswordShown = false;
+            _passwordInputIcon = Icons.Material.Filled.VisibilityOff;
+            _passwordInput = InputType.Password;
+        }
+        else
+        {
+            _isPasswordShown = true;
+            _passwordInputIcon = Icons.Material.Filled.Visibility;
+            _passwordInput = InputType.Text;
+        }
     }
 
 }
