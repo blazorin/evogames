@@ -11,10 +11,10 @@
         if (Editing)
         {
             <MudGrid Style="margin-left: 0;">
-                <MudSelect T="string" Value="Country" ValueChanged="@(async (country) => { await CountryChanged.InvokeAsync(country); await EditingChanged.InvokeAsync(false); })" Label="Country" Variant="Variant.Outlined" OffsetY="true" Required="true" RequiredError="Country is required" Adornment="Adornment.End" AdornmentIcon="@(Icons.Material.Filled.Edit)" OnAdornmentClick="@(async () => await EditingChanged.InvokeAsync(false))">
+                <MudSelect T="string" Value="Country" ValueChanged="@(async (country) => { await CountryChanged.InvokeAsync(country); await EditingChanged.InvokeAsync(false); })" Label="Country" Variant="Variant.Outlined" OffsetY="true" Required="true" RequiredError="Country is required">
                     <NewCountrySelectorItems/>
                 </MudSelect>
-                <MudIconButton Icon="@(Icons.Filled.Close)" OnClick="@(() => Editing = true)"/>
+                <MudIconButton Icon="@(Icons.Filled.Close)" OnClick="@(async () => await EditingChanged.InvokeAsync(false))"/>
             </MudGrid>
         }
         else
@@ -46,10 +46,10 @@
 
     [Parameter]
     public bool EditingFromProfile { get; set; }
-    
+
     [Parameter]
     public bool Editing { get; set; }
-    
+
     [Parameter]
     public EventCallback<bool> EditingChanged { get; set; }
 
