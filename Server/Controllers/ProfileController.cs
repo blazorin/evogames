@@ -7,6 +7,7 @@ using Model.Services;
 using Shared.ApiErrors;
 using Model.Extensions;
 using Shared.ProfileHelpers;
+using Shared.Utils;
 
 namespace Server.Controllers
 {
@@ -52,6 +53,24 @@ namespace Server.Controllers
 
             if (result == false)
                 return Conflict(new ConflictError("birth_update_error"));
+
+            return Ok();
+        }
+
+        [HttpPost("country")]
+        public async Task<IActionResult> UpdateCountry(UpdateProfileCountry newCountry)
+        {
+            if (string.IsNullOrEmpty(newCountry.Country))
+                return Conflict(new ConflictError("country_empty"));
+
+            if (!Enum.IsDefined(typeof(BlackList.Countries), newCountry.Country))
+                return Conflict(new ConflictError("country_not_allowed"));
+
+            var userId = User.GetId();
+            var result = await _profileServices.UpdateCountry(userId, newCountry.Country);
+
+            if (result == false)
+                return Conflict(new ConflictError("country_update_error"));
 
             return Ok();
         }
