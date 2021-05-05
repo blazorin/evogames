@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Model.Data;
 using Shared.Dto;
 using Shared.Enums;
+using Shared.Utils;
 
 namespace Model.Services
 {
@@ -33,10 +34,7 @@ namespace Model.Services
 
         public async Task<bool> UpdateBirth(string id, DateTime? newBirth)
         {
-            var storedProfile = await _ctx.Users
-                .Where(u => u.UserId == id)
-                .Include(u => u.Logs)
-                .FirstOrDefaultAsync();
+            var storedProfile = await FindCrowdUser(id);
 
             storedProfile.Birth = newBirth;
             storedProfile.Logs.Add(new UserLog
@@ -46,6 +44,28 @@ namespace Model.Services
             });
 
             return await _ctx.SaveChangesAsync() != 1;
+        }
+
+        public async Task<bool> UpdateCountry(string id, string country)
+        {
+            var storedProfile = await FindCrowdUser(id);
+
+            storedProfile.Country = country;
+            storedProfile.Logs.Add(new UserLog
+            {
+                Date = DateTime.Now, UserLogId = Guid.NewGuid().ToString() + Guid.NewGuid(),
+                UserLogType = UserLogType.CountryChanged
+            });
+
+            return await _ctx.SaveChangesAsync() != 1;
+        }
+
+        private async Task<User> FindCrowdUser(string id)
+        {
+            return await _ctx.Users
+                .Where(u => u.UserId == id)
+                .Include(u => u.Logs)
+                .FirstOrDefaultAsync();
         }
     }
 }
