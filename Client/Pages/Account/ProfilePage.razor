@@ -10,45 +10,73 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 
 <MudContainer MaxWidth="MaxWidth.Large">
-
-    @if (!userEditingUsername)
+    @if (!isLoading)
     {
-        <MudTextField T="string" Style="color: black" Label="Username" HelperText="You can change it one time only" Value="_userName" DisableUnderLine Adornment="Adornment.End" AdornmentIcon="@(Icons.Material.Filled.Edit)" OnAdornmentClick="@(() => userEditingUsername = !userEditingUsername)"/>
-    }
-    else
-    {
-        <MudTextField T="string" Label="Username" HelperText="You can change it one time only" Value="_userName" Adornment="Adornment.End" AdornmentIcon="@(Icons.Material.Filled.Edit)" OnAdornmentClick="@(() => userEditingUsername = !userEditingUsername)"/>
-    }
-    <MudTextField T="string" Style="color: black" Label="Email" Value="_userProfile.Email" DisableUnderLine Disabled/>
-    <MudContainer Class="mt-2"/>
-
-    @if (userEditingBirth)
-    {
-        <MudGrid Style="margin-left: 0;" Class="position-relative">
-            <MudDatePicker DateFormat="dd-MM-yyyy" Label="Birth" HelperText="Enter your Birth Date" Validation="@(new Func<DateTime?, string>(CheckAge))" Adornment="Adornment.End" Date="@(_storedTime ?? new(DateTime.Now.Year - 18, DateTime.Now.Month, DateTime.Now.Day))" DateChanged="UpdateBirth"/>
-            <MudIconButton Icon="@Icons.Filled.Close" OnClick="@(() => userEditingBirth = false)" Class="position-absolute"></MudIconButton>
-        </MudGrid>
-    }
-    else
-    {
-        if (_userProfile.Birth != null)
+        if (!userEditingUsername)
         {
-            <MudTextField T="string" Style="color: black" Label="Birth" Value="BirthText()" DisableUnderLine Adornment="Adornment.End" AdornmentIcon="@(Icons.Material.Filled.Edit)" OnAdornmentClick="@(() => userEditingBirth = true)"/>
+            <MudTextField T="string" Style="color: black" Label="Username" HelperText="You can change it one time only" Value="_userName" DisableUnderLine Adornment="Adornment.End" AdornmentIcon="@(Icons.Material.Filled.Edit)" OnAdornmentClick="@(() => userEditingUsername = !userEditingUsername)"/>
         }
         else
         {
-            <MudButton Color="Color.Primary" Variant="Variant.Filled" Size="Size.Small" OnClick="@(() => userEditingBirth = true)">
-                <MudText Typo="Typo.h6" Style="text-transform: none">Set Birth</MudText>
-            </MudButton>
+            <MudTextField T="string" Label="Username" HelperText="You can change it one time only" Value="_userName" Adornment="Adornment.End" AdornmentIcon="@(Icons.Material.Filled.Edit)" OnAdornmentClick="@(() => userEditingUsername = !userEditingUsername)"/>
         }
+        <MudTextField T="string" Style="color: black" Label="Email" Value="_userProfile.Email" DisableUnderLine Disabled/>
+        <MudContainer Class="mt-2"/>
+        if (userEditingBirth)
+        {
+            <MudGrid Style="margin-left: 0;">
+                <MudDatePicker DateFormat="dd/MM/yyyy" Label="Birth" HelperText="Enter your Birth Date" Validation="@(new Func<DateTime?, string>(CheckAge))" Adornment="Adornment.End" Date="@(_storedTime ?? new(DateTime.Now.Year - 18, DateTime.Now.Month, DateTime.Now.Day))" DateChanged="UpdateBirth"/>
+                <MudIconButton Icon="@Icons.Filled.Close" OnClick="@(() => userEditingBirth = false)"></MudIconButton>
+                <MudContainer Class="mt-1"/>
+            </MudGrid>
+        }
+        else
+        {
+            if (_userProfile.Birth != null)
+            {
+                <MudDisabledActionedInput Title="Birth" Value="@BirthText()" EditAction="@(() => userEditingBirth = true)"/>
+            }
+            else
+            {
+                <MudButton Style="text-transform: none" Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium" OnClick="@(() => userEditingBirth = true)">
+                    Set Birth
+                </MudButton>
+            }
+        }
+
+
+        <MudContainer Class="mt-4"/>
+        <NewCountrySelector Country="@_userProfile.Country" CountryChanged="UpdateCountry" @bind-Editing="@userEditingCountry" EditingFromProfile="true"/>
     }
-
-
-    <MudContainer Class="mt-3"/>
-    <NewCountrySelector @bind-Country="@_userProfile.Country"/>
-
+    else
+    {
+        <MudTextForInputSkeleton Title="Username"/>
+        <MudTextForInputSkeleton Title="Email"/>
+        <MudTextForInputSkeleton Title="Birth"/>
+        <MudTextForInputSkeleton Title="Country" CountryInput/>
+    }
 </MudContainer>
 
+@if (userEditingBirth || userEditingCountry || userEditingUsername)
+{
+    Snackbar.Add("You are in Editing Mode", Severity.Normal, config =>
+    {
+        config.Action = "Exit";
+        config.ActionColor = Color.Primary;
+        config.ShowCloseIcon = false;
+        config.RequireInteraction = true;
+        config.Onclick = _ =>
+        {
+            userEditingBirth = false;
+            userEditingCountry = false;
+            userEditingUsername = false;
+
+            StateHasChanged();
+
+            return Task.CompletedTask;
+        };
+    });
+}
 
 @code {
 
@@ -57,6 +85,7 @@
     bool isLoading;
     bool userEditingUsername;
     bool userEditingBirth;
+    bool userEditingCountry;
 
     DateTime? _storedTime;
 
@@ -67,6 +96,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        isLoading = true;
     // We have the username stored, let's use it instead of fetching from API, right?
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         _userName = authState.User?.Identity?.Name;
@@ -81,7 +111,10 @@
             return;
         }
         _userProfile = await response.Content.ReadFromJsonAsync<UserProfileDto>();
-        _storedTime = _userProfile.Birth;
+        _storedTime = _userProfile?.Birth;
+
+        await Task.Delay(750);
+        isLoading = false;
     }
 
     private async void OnAuthenticationStateChanged(Task<AuthenticationState> authStateTask)
@@ -100,7 +133,7 @@
     {
         if (date == null)
             return;
-        
+
         _storedTime = date;
 
         if (CheckAge(date) == null)
@@ -119,6 +152,23 @@
         }
     }
 
+    private async Task UpdateCountry(string country)
+    {
+        if (string.IsNullOrEmpty(country))
+            return;
+
+        var response = await HttpClient.PostAsJsonAsync("profile/country", new UpdateProfileCountry(country));
+        if (!response.IsSuccessStatusCode)
+        {
+            var apiError = await response.Content.ReadFromJsonAsync<ApiError>();
+            Snackbar.Add(apiError?.Message, Severity.Error);
+            return;
+        }
+
+        _userProfile.Country = country;
+        Snackbar.Add("Country updated successfully", Severity.Success);
+    }
+
     private string BirthText()
     {
         DateTime date = _userProfile.Birth.Value;
@@ -134,6 +184,21 @@
             return $"{date.Day}/0{date.Month}/{date.Year}";
 
         return $"{date.Day}/{date.Month}/{date.Year}";
+    }
+
+    private void ShowCloseEditingSnackBar()
+    {
+        Snackbar.Add("Exit edit mode", Severity.Normal, config =>
+        {
+            config.Onclick = sb =>
+            {
+                userEditingBirth = false;
+                userEditingCountry = false;
+                userEditingUsername = false;
+
+                return Task.CompletedTask;
+            };
+        });
     }
 
     public void Dispose()
