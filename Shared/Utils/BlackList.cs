@@ -12,6 +12,7 @@ namespace Shared.Utils
             "moderator",
             "helper",
             "hitler",
+            "mussolini",
             "evogames",
             "evo.games",
             "xxx",
