@@ -30,7 +30,7 @@ namespace Model.Services
         {
             User storedUser;
 
-            if (logType == UserLogType.GoogleLogin || logType == UserLogType.DiscordLogin)
+            if (logType is UserLogType.GoogleLogin or UserLogType.DiscordLogin)
             {
                 storedUser = await _ctx.Users
                     .Where(user => user.Email == credentials.Email)
@@ -42,7 +42,9 @@ namespace Model.Services
             {
                 var passwordHashed = HashingHelper.ComputeSha256Hash(credentials.Password);
                 storedUser = await _ctx.Users
-                    .Where(user => user.Email == credentials.Email && user.PasswordHashed == passwordHashed)
+                    .Where(user =>
+                        user.Email == credentials.Email && !string.IsNullOrEmpty(user.PasswordHashed) &&
+                        user.PasswordHashed == passwordHashed)
                     .Include(user => user.Logs)
                     .Include(user => user.Perms)
                     .FirstOrDefaultAsync();
@@ -121,7 +123,10 @@ namespace Model.Services
                 _ => oauthCredentials.Username
             };
 
-            string usernameBase = BlackList.Names.Any(word => username.Contains(word)) ? "goofy" : username;
+            if (BlackList.Names.Any(word => username.Contains(word)))
+                username = "goofy";
+
+            string usernameBase = username;
             int count = 0;
             while (await UsernameExistsAsync(username))
             {
