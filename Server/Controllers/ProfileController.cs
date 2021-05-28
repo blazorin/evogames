@@ -36,7 +36,7 @@ namespace Server.Controllers
                 : Ok(userProfile);
         }
 
-        [HttpPost("birth")]
+        [HttpPut("birth")]
         public async Task<IActionResult> UpdateBirth(UpdateProfileBirth newBirth)
         {
             // Check if +18
@@ -57,7 +57,7 @@ namespace Server.Controllers
             return Ok();
         }
 
-        [HttpPost("country")]
+        [HttpPut("country")]
         public async Task<IActionResult> UpdateCountry(UpdateProfileCountry newCountry)
         {
             if (string.IsNullOrEmpty(newCountry.Country))
