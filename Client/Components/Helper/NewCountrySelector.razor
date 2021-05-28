@@ -10,24 +10,24 @@
     {
         if (Editing)
         {
-            <MudGrid Style="margin-left: 0;">
+            <div style="width: 250px; display: flex; align-items: flex-end">
                 <MudSelect T="string" Value="Country" ValueChanged="@(async (country) => { await CountryChanged.InvokeAsync(country); await EditingChanged.InvokeAsync(false); })" Label="Country" Variant="Variant.Outlined" OffsetY="true" Required="true" RequiredError="Country is required">
                     <NewCountrySelectorItems/>
                 </MudSelect>
-                <MudIconButton Icon="@(Icons.Filled.Close)" OnClick="@(async () => await EditingChanged.InvokeAsync(false))"/>
-            </MudGrid>
+                <MudIconButton Style="margin-left: 10px" Icon="@(Icons.Filled.Close)" OnClick="@(async () => await EditingChanged.InvokeAsync(false))"/>
+            </div>
         }
         else
         {
             if (!string.IsNullOrEmpty(Country))
             {
-                <MudGrid Style="margin-left: 0;">
-
+                <div style="width: 250px; display: flex; align-items: flex-end">
                     <MudSelect T="string" Value="Country" Label="Country" Variant="Variant.Outlined" OffsetY="true" Disabled="true">
                         <NewCountrySelectorItems/>
                     </MudSelect>
-                    <MudIconButton Icon="@(Icons.Material.Filled.Edit)" OnClick="@(async () => await EditingChanged.InvokeAsync(true))"/>
-                </MudGrid>
+                    <MudIconButton Style="margin-left: 10px" Icon="@(Icons.Material.Filled.Edit)" OnClick="@(async () => await EditingChanged.InvokeAsync(true))"/>
+    
+                </div>
             }
             else
             {
