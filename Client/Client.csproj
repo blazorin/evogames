@@ -29,7 +29,6 @@
     <ProjectReference Include="..\Shared\Shared.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Components\Helper\Input" />
     <Folder Include="Extensions\DataAnnotations" />
     <Folder Include="Services" />
   </ItemGroup>
