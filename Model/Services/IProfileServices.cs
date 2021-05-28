@@ -1,7 +1,6 @@
 using System;
 using System.Threading.Tasks;
 using Shared.Dto;
-using Shared.Utils;
 
 namespace Model.Services
 {
