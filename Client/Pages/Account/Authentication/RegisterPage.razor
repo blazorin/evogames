@@ -11,26 +11,26 @@
         <MudCardContent>
             <MudForm @bind-IsValid="@isValid">
                 <MudTextField T="string" Label="Email" Required="true" Immediate="true" RequiredError="Email is required"
-                              Validation="@(new Func<string, IEnumerable<string>>(CheckEmail))" OnKeyUp="OnEmailChanged" @ref="Email"/>
+                              Validation="@(new Func<string, IEnumerable<string>>(arg => ClientValidationHelper.CheckEmail(arg, emailExists)))" OnKeyUp="OnEmailChanged" @ref="Email"/>
                 <MudTextField T="string" Label="Username" HelperText="Letters and numbers allowed" Required="true" Immediate="true"
-                              RequiredError="Username is required" Validation="@(new Func<string, IEnumerable<string>>(CheckUsername))" @ref="Username" OnKeyUp="OnUsernameChanged"/>
+                              RequiredError="Username is required" Validation="@(new Func<string, IEnumerable<string>>(arg => ClientValidationHelper.CheckUsername(arg, usernameExists)))" @ref="Username" OnKeyUp="OnUsernameChanged"/>
                 <MudTextField T="string" Label="Password" HelperText="Choose a strong password" InputType="@_passwordInput" Adornment="Adornment.End" AdornmentIcon="@_passwordInputIcon" OnAdornmentClick="PasswordEye"
                               Required="true"
                               RequiredError="Password is required"
                               Immediate="true"
-                              Validation="@(new Func<string, IEnumerable<string>>(PasswordStrength))"
+                              Validation="@(new Func<string, IEnumerable<string>>(arg => ClientValidationHelper.PasswordStrength(arg, PasswordRepeat)))"
                               @ref="Password"/>
                 <MudTextField T="string"
                               Label="Password" HelperText="Repeat the password" InputType="@_passwordInput" Adornment="Adornment.End" AdornmentIcon="@_passwordInputIcon" OnAdornmentClick="PasswordEye"
                               Required="true"
                               RequiredError="Repeat your password"
                               Immediate="true"
-                              Validation="@(new Func<string, string>(PasswordMatch))"
+                              Validation="@(new Func<string, string>(arg => ClientValidationHelper.PasswordMatch(arg, Password)))"
                               @ref="PasswordRepeat"/>
 
                 <MudItem xs="12" sm="6" md="4">
                     @*This should use the current UI Culture, by default *@
-                    <MudDatePicker DateFormat="dd/MM/yyyy" Label="Birth" @bind-Date="@Birth" HelperText="Enter your Birth Date" Validation="@(new Func<DateTime?, string>(CheckAge))"></MudDatePicker>
+                    <MudDatePicker DateFormat="dd/MM/yyyy" Label="Birth" @bind-Date="@Birth" HelperText="Enter your Birth Date" Validation="@(new Func<DateTime?, string>(arg => ClientValidationHelper.CheckAge(arg)))"></MudDatePicker>
                 </MudItem>
                 <NewCountrySelector @bind-Country="@Country"></NewCountrySelector>
                 <MudCheckBox T="bool" Required="true" RequiredError="You must agree" Class="ml-n2"
@@ -38,7 +38,7 @@
             </MudForm>
         </MudCardContent>
         <MudCardActions>
-            <GoogleButtonPopUp ReturnUrl="@returnUrl" CalledFromRegister></GoogleButtonPopUp>
+            <GoogleButtonPopUp ReturnUrl="@returnUrl"></GoogleButtonPopUp>
             <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!isValid || isCreating)" Class="ml-auto" OnClick="CreateAccount">Register</MudButton>
         </MudCardActions>
     </MudCard>
@@ -79,80 +79,7 @@
             returnUrl = returnUrlParam;
         }
     }
-
-    private IEnumerable<string> CheckEmail(string arg)
-    {
-    //EmailAddressAttribute attribute = new();
-
-        if (string.IsNullOrWhiteSpace(arg))
-        {
-            yield return "Email is required";
-            yield break;
-        }
-
-        if (!CheckValidEmail.Validate(arg))
-            yield return "Invalid email";
-
-        if (emailExists)
-            yield return "This email already exists";
-    }
-
-    private IEnumerable<string> CheckUsername(string arg)
-    {
-        if (string.IsNullOrWhiteSpace(arg))
-        {
-            yield return "Username is required";
-            yield break;
-        }
-
-        if (BlackList.Names.Any(name => name == arg))
-            yield return $"Username {arg} is not allowed";
-
-        if (usernameExists)
-            yield return "This username already exists";
-
-        if (arg.Length < 4)
-            yield return "Username too short";
-
-
-        if (arg.Length > 15)
-            yield return "Username too large";
-
-        if (!arg.All(char.IsLetterOrDigit))
-            yield return "Username does not accept symbols";
-    }
-
-    private static string CheckAge(DateTime? arg)
-    {
-        return arg != null && (DateTime.Compare(arg.Value.AddYears(18), DateTime.Now) == 1 || arg.Value.Year < DateTime.Now.Year - 100) ? "You need to be major of age to play" : null;
-    }
-
-    private IEnumerable<string> PasswordStrength(string pw)
-    {
-        if (string.IsNullOrWhiteSpace(pw))
-        {
-            yield return "Password is required";
-            yield break;
-        }
-        if (pw.Length < 8)
-            yield return "Password must be at least of length 8";
-        if (!Regex.IsMatch(pw, @"[A-Z]"))
-            yield return "Password must contain at least one capital letter";
-        if (!Regex.IsMatch(pw, @"[a-z]"))
-            yield return "Password must contain at least one lowercase letter";
-        if (!Regex.IsMatch(pw, @"[0-9]"))
-            yield return "Password must contain at least one digit";
-
-        if (!string.IsNullOrEmpty(PasswordRepeat.Value))
-            PasswordRepeat.Validate();
-    }
-
-
-    private string PasswordMatch(string arg)
-    {
-        return !string.IsNullOrEmpty(Password.Value) && Password.Value != arg ? "Passwords don't match" : null;
-    }
-
+    
     async Task CreateAccount()
     {
         if (emailExists || usernameExists)

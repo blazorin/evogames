@@ -10,13 +10,13 @@
         <MudCardContent>
             <MudForm @bind-IsValid="@isValid">
                 <MudTextField T="string" Label="Email" Required="true" Immediate="true" RequiredError="Email is required" HelperText="Your current email"
-                              Validation="@(new Func<string, IEnumerable<string>>(CheckEmail))" @ref="                                            Email"/>
+                              Validation="@(new Func<string, IEnumerable<string>>(arg => ClientValidationHelper.CheckEmail(arg)))" @ref="Email"/>
                 <MudTextField T="string" Label="Password" HelperText="Your current password" InputType="@_passwordInput" Adornment="Adornment.End" AdornmentIcon="@_passwordInputIcon" OnAdornmentClick="PasswordEye"
                               Required="true"
                               RequiredError="Password is required"
                               Immediate="true"
                               Validation="@(new Func<string, IEnumerable<string>>(CheckPassword))"
-                              @ref="                                            Password"/>
+                              @ref="Password"/>
             </MudForm>
         </MudCardContent>
         <MudCardActions>
@@ -54,18 +54,6 @@
         {
             returnUrl = returnUrlParam;
         }
-    }
-
-    private static IEnumerable<string> CheckEmail(string arg)
-    {
-        if (string.IsNullOrWhiteSpace(arg))
-        {
-            yield return "Email is required";
-            yield break;
-        }
-
-        if (!CheckValidEmail.Validate(arg))
-            yield return "Invalid email";
     }
 
     private static IEnumerable<string> CheckPassword(string pw)
