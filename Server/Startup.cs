@@ -64,7 +64,8 @@ namespace Server
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
-                app.UseWebAssemblyDebugging();
+                /* // Disabling WebAssembly hosting in backend. Now served by CDN.*/
+                // app.UseWebAssemblyDebugging();
             }
             else
             {
@@ -74,7 +75,9 @@ namespace Server
             }
 
             app.UseHttpsRedirection();
-            app.UseBlazorFrameworkFiles();
+
+            /* // Disabling WebAssembly hosting in backend. Now served by CDN.*/
+            // app.UseBlazorFrameworkFiles();
             app.UseStaticFiles();
 
             app.UseRouting();
@@ -85,7 +88,8 @@ namespace Server
             {
                 endpoints.MapRazorPages();
                 endpoints.MapControllers();
-                endpoints.MapFallbackToFile("index.html");
+                /* // Disabling WebAssembly hosting in backend. Now served by CDN.*/
+                // endpoints.MapFallbackToFile("index.html");
             });
         }
     }

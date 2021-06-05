@@ -32,7 +32,7 @@ namespace Server.Controllers
             var userProfile = await _profileServices.GetProfile(userId);
 
             return userProfile == null
-                ? new ObjectResult(new InternalServerError("profile_get_error"))
+                ? Conflict(new ConflictError("profile_get_error"))
                 : Ok(userProfile);
         }
 
