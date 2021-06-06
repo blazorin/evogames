@@ -28,15 +28,14 @@ namespace Client.Components.Helper.Validation
             if (BlackList.Names.Any(name => name == arg))
                 yield return $"Username {arg} is not allowed";
 
-            if (usernameExists)
-                yield return "This username already exists";
-
             if (arg.Length < 4)
                 yield return "Username too short";
 
-
             if (arg.Length > 15)
                 yield return "Username too large";
+            
+            if (usernameExists)
+                yield return "This username already exists";
 
             if (!arg.All(char.IsLetterOrDigit))
                 yield return "Username does not accept symbols";
@@ -79,10 +78,12 @@ namespace Client.Components.Helper.Validation
             if (!string.IsNullOrEmpty(passwordRepeatField.Value))
                 passwordRepeatField.Validate();
         }
-        
+
         public static string PasswordMatch(string arg, MudTextField<string> passwordField)
         {
-            return !string.IsNullOrEmpty(passwordField.Value) && passwordField.Value != arg ? "Passwords don't match" : null;
+            return !string.IsNullOrEmpty(passwordField.Value) && passwordField.Value != arg
+                ? "Passwords don't match"
+                : null;
         }
     }
 }
