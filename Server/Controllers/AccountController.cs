@@ -93,22 +93,22 @@ namespace Server.Controllers
             if (newUser.Name.Length > 15)
                 return Unauthorized(new UnauthorizedError("username_too_big"));
 
+            // Check username regex
+            if (!newUser.Name.All(char.IsLetterOrDigit))
+                return Unauthorized(new UnauthorizedError("username_symbols"));
+
             if (newUser.Email.Length > 100 || !CheckValidEmail.Validate(newUser.Email))
                 return Unauthorized(new UnauthorizedError("email_invalid"));
 
             // Check email if registered
             var emailRegistered = await _userServices.EmailExistsAsync(newUser.Email);
             if (emailRegistered)
-                return Unauthorized(new UnauthorizedError("email_already_used"));
-
-            // Check username regex
-            if (!newUser.Name.All(char.IsLetterOrDigit))
-                return Unauthorized(new UnauthorizedError("username_symbols"));
+                return Unauthorized(new UnauthorizedError("email_already_exists"));
 
             // Check username if registered
             var userRegistered = await _userServices.UsernameExistsAsync(newUser.Name);
             if (userRegistered)
-                return Unauthorized(new UnauthorizedError("username_already_used"));
+                return Unauthorized(new UnauthorizedError("username_already_exists"));
 
             // Check if +18
             if (newUser.Birth == null)
@@ -163,7 +163,7 @@ namespace Server.Controllers
                 payload = await GoogleJsonWebSignature.ValidateAsync(request.IdToken,
                     new GoogleJsonWebSignature.ValidationSettings
                     {
-                        Audience = new[] {_configuration["Authentication:Google:ClientId"]}
+                        Audience = new[] { _configuration["Authentication:Google:ClientId"] }
                     });
 
                 // It is important to add your ClientId as an audience in order to make sure
