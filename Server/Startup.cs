@@ -44,6 +44,9 @@ namespace Server
                         ValidAudience = "EvoGamesClient"
                     };
                 });
+
+            // CORS
+            services.AddCors();
         }
 
 
@@ -54,6 +57,14 @@ namespace Server
             {
                 db.Database.EnsureCreated();
             }
+
+            //CORS
+            app.UseCors(builder =>
+            {
+                builder.WithOrigins("https://localhost:5001");
+                builder.AllowAnyMethod();
+                builder.AllowAnyHeader();
+            });
 
             // Handles exceptions and generates a custom response body
             app.UseExceptionHandler("/errors/500");
