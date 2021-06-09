@@ -1,4 +1,7 @@
 @page "/account/profile"
+@using Client.Components.Helper.Dialog
+@using Client.Extensions.Authentication
+@using global::Shared.Utils
 @implements IDisposable
 @inject IDialogService DialogService
 @inject HttpClient HttpClient
@@ -11,15 +14,17 @@
         if (_userEditingUsername)
         {
             <div style="width: 150px">
-                <MudTextField T="string" Label="Username" HelperText="You can always change it" Value="@_userName" Immediate Validation="@(new Func<string, IEnumerable<string>>(arg => ClientValidationHelper.CheckUsername(arg)))"/>
-                <MudButton Color="Color.Success">Save</MudButton>
-                <MudButton Color="Color.Error" OnClick="@(() => { _userEditingUsername = false; ClearEditingModeSnackBar(); })">Cancel</MudButton>
+                <MudForm @bind-IsValid="@_usernameValid">
+                    <MudTextField T="string" Label="Username" HelperText="You can always change it" Value="@(_usernameField?.Value ?? _username)" Immediate="true" Validation="@(new Func<string, IEnumerable<string>>(arg => ClientValidationHelper.CheckUsername(arg, _usernameExists)))" ValueChanged="async _ => await _usernameField.Validate()" OnKeyUp="OnUsernameChanged" @ref="_usernameField"/>
+                </MudForm>
+                <MudButton Color="Color.Success" OnClick="OpenUsernameDialog" Disabled="@(!_usernameValid || _updatingUsername || _usernameField?.Value == _username)">Save</MudButton>
+                <MudButton Color="Color.Error" OnClick="@(() => { _userEditingUsername = false; ClearEditingModeSnackBar(); })" Disabled="_updatingUsername">Cancel</MudButton>
             </div>
         }
         else
         {
             <div style="width: 150px">
-                <MudDisabledActionedInput Title="Username" HelperText="You can always change it" Value="@_userName" EditAction="@(() => { _userEditingUsername = true; PopEditingModeSnackBar(); })"/>
+                <MudDisabledActionedInput Title="Username" HelperText="You can always change it" Value="@_username" EditAction="@(() => { _userEditingUsername = true; PopEditingModeSnackBar(); })"/>
             </div>
         }
         <MudTextField T="string" Style="color: black" Label="Email" Value="_userProfile.Email" DisableUnderLine Disabled/>
@@ -65,9 +70,16 @@
 @code {
 
     UserProfileDto _userProfile = new();
-    string _userName;
+    string _username;
+    MudTextField<string> _usernameField;
+
     bool _isLoading;
+
     bool _userEditingUsername;
+    bool _usernameValid = true; // field starts from valid value
+    bool _usernameExists;
+    bool _updatingUsername;
+
     bool _userEditingBirth;
     bool _userEditingCountry;
 
@@ -75,9 +87,21 @@
 
     DateTime? _storedTime;
 
-    private void OpenDialog()
+    private void OpenUsernameDialog()
     {
-        DialogService.Show<ChangeUsernameDialog>("Change Password Dialog");
+        if (!_usernameValid)
+            return;
+
+        var parameters = new DialogParameters
+        {
+            { "ContentText", $"Do you really want to change your username to {_usernameField.Value} ? This process cannot be undone." },
+            { "ButtonText", "Change" },
+            { "SubmitEvent", new Func<Task>(UpdateUsername) }, //hey, works good!
+            { "Color", Color.Error }
+        };
+
+    // prompt dialog
+        DialogService.Show<EvoDialog>("Change Username", parameters, new DialogOptions { DisableBackdropClick = true });
     }
 
     protected override async Task OnInitializedAsync()
@@ -86,7 +110,10 @@
 
     // We have the username stored, let's use it instead of fetching from API, right?
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        _userName = authState.User?.Identity?.Name;
+        _username = authState.User?.Identity?.Name;
+
+        _usernameField = new MudTextField<string> { Value = _username }; // field starts with value (workarround)
+
 
         AuthenticationStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
 
@@ -107,7 +134,7 @@
     private async void OnAuthenticationStateChanged(Task<AuthenticationState> authStateTask)
     {
         var authState = await authStateTask;
-        _userName = authState.User?.Identity?.Name;
+        _username = authState.User?.Identity?.Name;
         StateHasChanged();
     }
 
@@ -178,6 +205,56 @@
             return $"{date.Day}/0{date.Month}/{date.Year}";
 
         return $"{date.Day}/{date.Month}/{date.Year}";
+    }
+
+    private async Task OnUsernameChanged(KeyboardEventArgs _)
+    {
+        var value = _usernameField.Value;
+        if (value.Length is < 4 or > 15 || BlackList.Names.Any(name => name == value) || value == _username)
+            return;
+
+        var response = await HttpClient.GetAsync($"account/username/{value}");
+
+        var result = await response.Content.ReadFromJsonAsync<bool>();
+
+        _usernameExists = result;
+
+        await _usernameField.Validate();
+    }
+
+    private async Task UpdateUsername()
+    {
+        var value = _usernameField.Value;
+
+        if (!_usernameValid || _usernameExists || string.IsNullOrEmpty(value))
+            return;
+
+        _updatingUsername = true;
+        StateHasChanged(); // remind Blazor to re-render, because it's a func and not an EventCallback.
+
+        await Task.Delay(1500);
+
+        var response = await HttpClient.PutAsJsonAsync("profile/username", new UpdateProfileUsername(value));
+
+        if (!response.IsSuccessStatusCode)
+        {
+            ApiError error = await response.Content.ReadFromJsonAsync<ApiError>();
+            Snackbar.Add(error?.Message, Severity.Error);
+
+            _updatingUsername = false;
+            StateHasChanged(); // remind Blazor to re-render, because it's a func and not an EventCallback.
+            return;
+        }
+
+    // fire OnAuthenticationStateChanged 
+
+        _updatingUsername = false;
+        _userEditingUsername = false;
+        _username = value;
+        ClearEditingModeSnackBar();
+
+        await ((CustomAuthenticationStateProvider)AuthenticationStateProvider).UpdateUsernameAsync(value);
+        Snackbar.Add("Username updated successfuly", Severity.Success);
     }
 
     /*
