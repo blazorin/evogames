@@ -97,6 +97,15 @@ namespace Server.Controllers
             if (!newUser.Name.All(char.IsLetterOrDigit))
                 return Unauthorized(new UnauthorizedError("username_symbols"));
 
+            // Check if username is blacklisted
+            if (BlackList.Names.Any(name => name == newUser.Name))
+                return Unauthorized(new UnauthorizedError("username_blacklisted"));
+
+            // Check username if registered
+            var userRegistered = await _userServices.UsernameExistsAsync(newUser.Name);
+            if (userRegistered)
+                return Unauthorized(new UnauthorizedError("username_already_exists"));
+
             if (newUser.Email.Length > 100 || !CheckValidEmail.Validate(newUser.Email))
                 return Unauthorized(new UnauthorizedError("email_invalid"));
 
@@ -104,11 +113,6 @@ namespace Server.Controllers
             var emailRegistered = await _userServices.EmailExistsAsync(newUser.Email);
             if (emailRegistered)
                 return Unauthorized(new UnauthorizedError("email_already_exists"));
-
-            // Check username if registered
-            var userRegistered = await _userServices.UsernameExistsAsync(newUser.Name);
-            if (userRegistered)
-                return Unauthorized(new UnauthorizedError("username_already_exists"));
 
             // Check if +18
             if (newUser.Birth == null)
@@ -118,10 +122,6 @@ namespace Server.Controllers
 
             if (newUser.Birth.Value.Year < DateTime.Now.Year - 100 || notMajorAje)
                 return Unauthorized(new UnauthorizedError("not_major_age"));
-
-            // Check if username is blacklisted
-            if (BlackList.Names.Any(name => name == newUser.Name))
-                return Unauthorized(new UnauthorizedError("username_blacklisted"));
 
             // Check if country is allowed
             if (!Enum.IsDefined(typeof(BlackList.Countries), newUser.Country))
