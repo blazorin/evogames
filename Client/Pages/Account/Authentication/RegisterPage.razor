@@ -135,7 +135,7 @@
         await Email.Validate();
     }
 
-    private async Task OnUsernameChanged(KeyboardEventArgs args)
+    private async Task OnUsernameChanged(KeyboardEventArgs _)
     {
         var value = Username.Value;
         if (value.Length is < 4 or > 15 || BlackList.Names.Any(name => name == value))
