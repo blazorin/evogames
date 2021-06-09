@@ -4,9 +4,6 @@ namespace Shared.ProfileHelpers
     {
         public string Country { get; }
 
-        public UpdateProfileCountry(string country)
-        {
-            Country = country;
-        }
+        public UpdateProfileCountry(string country) => Country = country;
     }
 }

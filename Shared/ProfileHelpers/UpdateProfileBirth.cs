@@ -6,9 +6,6 @@ namespace Shared.ProfileHelpers
     {
         public DateTime? Birth { get; }
 
-        public UpdateProfileBirth(DateTime? birth)
-        {
-            Birth = birth;
-        }
+        public UpdateProfileBirth(DateTime? birth) => Birth = birth;
     }
 }
