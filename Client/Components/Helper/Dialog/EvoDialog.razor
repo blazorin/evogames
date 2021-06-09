@@ -1,0 +1,39 @@
+<MudDialog>
+    <DialogContent>
+        <MudText>@ContentText</MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="waitingResponse">Cancel</MudButton>
+        <MudButton Color="@Color" Variant="Variant.Filled" OnClick="@(async _ => { waitingResponse = true; await SubmitEvent.Invoke(); waitingResponse = false; Submit(); })" Disabled="waitingResponse">@ButtonText</MudButton>
+        @if (waitingResponse)
+        {
+            <div style="display: block">
+                <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-7"/>
+            </div>
+        }
+    </DialogActions>
+</MudDialog>
+
+
+@code {
+
+    [CascadingParameter]
+    MudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public string ContentText { get; set; }
+
+    [Parameter]
+    public string ButtonText { get; set; }
+
+    [Parameter]
+    public Color Color { get; set; }
+
+    [Parameter]
+    public Func<Task> SubmitEvent { get; set; }
+
+    bool waitingResponse;
+
+    void Submit() => MudDialog.Close(DialogResult.Ok(true));
+    void Cancel() => MudDialog.Cancel();
+}
