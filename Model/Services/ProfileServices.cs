@@ -7,7 +7,6 @@ using Microsoft.EntityFrameworkCore;
 using Model.Data;
 using Shared.Dto;
 using Shared.Enums;
-using Shared.Utils;
 
 namespace Model.Services
 {
@@ -55,6 +54,20 @@ namespace Model.Services
             {
                 Date = DateTime.Now, UserLogId = Guid.NewGuid().ToString() + Guid.NewGuid(),
                 UserLogType = UserLogType.CountryChanged
+            });
+
+            return await _ctx.SaveChangesAsync() != 1;
+        }
+
+        public async Task<bool> UpdateUsername(string id, string username)
+        {
+            var storedProfile = await FindCrowdUser(id);
+
+            storedProfile.Name = username;
+            storedProfile.Logs.Add(new UserLog
+            {
+                Date = DateTime.Now, UserLogId = Guid.NewGuid().ToString() + Guid.NewGuid(),
+                UserLogType = UserLogType.UsernameChanged
             });
 
             return await _ctx.SaveChangesAsync() != 1;

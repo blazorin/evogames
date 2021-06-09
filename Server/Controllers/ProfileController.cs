@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Configuration;
@@ -17,12 +18,15 @@ namespace Server.Controllers
     public class ProfileController : ControllerBase
     {
         private readonly IProfileServices _profileServices;
+        private readonly IUserServices _userServices;
         private IConfiguration _configuration { get; }
 
-        public ProfileController(IProfileServices profileServices, IConfiguration configuration)
+        public ProfileController(IProfileServices profileServices, IConfiguration configuration,
+            IUserServices userServices)
         {
             _profileServices = profileServices;
             _configuration = configuration;
+            _userServices = userServices;
         }
 
         [HttpGet("me")]
@@ -71,6 +75,36 @@ namespace Server.Controllers
 
             if (result == false)
                 return Conflict(new ConflictError("country_update_error"));
+
+            return Ok();
+        }
+
+        [HttpPut("username")]
+        public async Task<IActionResult> UpdateUsername(UpdateProfileUsername newUsername)
+        {
+            if (string.IsNullOrWhiteSpace(newUsername.Username) || newUsername.Username.Length < 4)
+                return Conflict(new ConflictError("username_too_small"));
+
+            if (newUsername.Username.Length > 15)
+                return Conflict(new ConflictError("username_too_big"));
+
+            // Check username regex
+            if (!newUsername.Username.All(char.IsLetterOrDigit))
+                return Conflict(new ConflictError("username_symbols"));
+
+            // Check if username is blacklisted
+            if (BlackList.Names.Any(name => name == newUsername.Username))
+                return Conflict(new ConflictError("username_blacklisted"));
+
+            bool usernameExists = await _userServices.UsernameExistsAsync(newUsername.Username);
+            if (usernameExists)
+                return Conflict(new ConflictError("username_already_exists"));
+
+            var userId = User.GetId();
+            var result = await _profileServices.UpdateUsername(userId, newUsername.Username);
+
+            if (result == false)
+                return Conflict(new ConflictError("username_update_error"));
 
             return Ok();
         }
