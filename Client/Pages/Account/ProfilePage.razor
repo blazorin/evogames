@@ -17,7 +17,7 @@
                 <MudForm @bind-IsValid="@_usernameValid">
                     <MudTextField T="string" Label="Username" HelperText="You can always change it" Value="@(_usernameField?.Value ?? _username)" Immediate="true" Validation="@(new Func<string, IEnumerable<string>>(arg => ClientValidationHelper.CheckUsername(arg, _usernameExists)))" ValueChanged="async _ => await _usernameField.Validate()" OnKeyUp="OnUsernameChanged" @ref="_usernameField"/>
                 </MudForm>
-                <MudButton Color="Color.Success" OnClick="OpenUsernameDialog" Disabled="@(!_usernameValid || _updatingUsername || _usernameField?.Value == _username)">Save</MudButton>
+                <MudButton Color="Color.Success" OnClick="OpenUsernameDialog" Disabled="@(!_usernameValid || _updatingUsername || (_usernameField?.Value ?? _username) == _username)">Save</MudButton>
                 <MudButton Color="Color.Error" OnClick="@(() => { _userEditingUsername = false; ClearEditingModeSnackBar(); })" Disabled="_updatingUsername">Cancel</MudButton>
             </div>
         }
@@ -31,9 +31,9 @@
         <MudContainer Class="mt-2"/>
         if (_userEditingBirth)
         {
-            <div style="width: 1250px; display: flex; align-items: flex-end">
+            <div style="width: 1250px; display: flex; align-items: flex-end; margin-top: -6px">
                 <MudDatePicker DateFormat="dd/MM/yyyy" Label="Birth" HelperText="Enter your Birth Date" Validation="@(new Func<DateTime?, string>(CheckAge))" Adornment="Adornment.End" Date="@(_storedTime ?? new(DateTime.Now.Year - 18, DateTime.Now.Month, DateTime.Now.Day))" DateChanged="UpdateBirth"/>
-                <MudIconButton Style="margin-left: 10px" Icon="@Icons.Filled.Close" OnClick="@(() => { _userEditingBirth = false; ClearEditingModeSnackBar(); })"></MudIconButton>
+                <MudIconButton Style="margin-left: 12px; margin-bottom: 14px" Icon="@Icons.Filled.Close" OnClick="@(() => { _userEditingBirth = false; ClearEditingModeSnackBar(); })"></MudIconButton>
                 <MudContainer Class="mt-1"/>
             </div>
         }
@@ -42,7 +42,7 @@
             if (_userProfile.Birth != null)
             {
                 <div style="width: 220px">
-                    <MudDisabledActionedInput Title="Birth" Value="@BirthText()" EditAction="@(() => { _userEditingBirth = true; PopEditingModeSnackBar(); })"/>
+                    <MudDisabledActionedInput Title="Birth" HelperText="It won't show to other players" Value="@BirthText()" EditAction="@(() => { _userEditingBirth = true; PopEditingModeSnackBar(); })"/>
                 </div>
             }
             else
@@ -61,7 +61,7 @@
     {
         <MudTextForInputSkeleton Title="Username" HasHelperText Width="150px" Height="32px"/>
         <MudTextForInputSkeleton Title="Email" Width="187px" Height="27.2px"/>
-        <MudTextForInputSkeleton Title="Birth" Width="220px" Height="32px"/>
+        <MudTextForInputSkeleton Title="Birth" HasHelperText Width="220px" Height="32px"/>
         <MudContainer Class="mt-2"/>
         <MudTextForInputSkeleton Title="Country" CountryInput/>
     }
@@ -94,6 +94,7 @@
 
         var parameters = new DialogParameters
         {
+            { "ContentTitle", "Change Username" },
             { "ContentText", $"Do you really want to change your username to {_usernameField.Value} ? This process cannot be undone." },
             { "ButtonText", "Change" },
             { "SubmitEvent", new Func<Task>(UpdateUsername) }, //hey, works good!
@@ -101,7 +102,7 @@
         };
 
     // prompt dialog
-        DialogService.Show<EvoDialog>("Change Username", parameters, new DialogOptions { DisableBackdropClick = true });
+        DialogService.Show<EvoDialog>(string.Empty, parameters, new DialogOptions { DisableBackdropClick = true });
     }
 
     protected override async Task OnInitializedAsync()
@@ -111,8 +112,6 @@
     // We have the username stored, let's use it instead of fetching from API, right?
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         _username = authState.User?.Identity?.Name;
-
-        _usernameField = new MudTextField<string> { Value = _username }; // field starts with value (workarround)
 
 
         AuthenticationStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
@@ -127,7 +126,7 @@
         _userProfile = await response.Content.ReadFromJsonAsync<UserProfileDto>();
         _storedTime = _userProfile?.Birth;
 
-        await Task.Delay(750);
+        await Task.Delay(new Random().Next(1250, 1950));
         _isLoading = false;
     }
 
@@ -222,7 +221,7 @@
         await _usernameField.Validate();
     }
 
-    private async Task UpdateUsername()
+    async Task UpdateUsername()
     {
         var value = _usernameField.Value;
 
@@ -231,8 +230,6 @@
 
         _updatingUsername = true;
         StateHasChanged(); // remind Blazor to re-render, because it's a func and not an EventCallback.
-
-        await Task.Delay(1500);
 
         var response = await HttpClient.PutAsJsonAsync("profile/username", new UpdateProfileUsername(value));
 
@@ -251,6 +248,8 @@
         _updatingUsername = false;
         _userEditingUsername = false;
         _username = value;
+
+        await Task.Delay(new Random().Next(1250, 1950));
         ClearEditingModeSnackBar();
 
         await ((CustomAuthenticationStateProvider)AuthenticationStateProvider).UpdateUsernameAsync(value);
@@ -284,7 +283,7 @@
             config.Onclick = _ =>
             {
                 _userEditingUsername = _userEditingCountry = _userEditingBirth = false;
-                _editingModeSnackbar = null;
+                ClearEditingModeSnackBar();
 
                 StateHasChanged();
                 return Task.CompletedTask;
@@ -293,6 +292,7 @@
 
     private void ClearEditingModeSnackBar()
     {
+        if (_editingModeSnackbar == null) return;
         if (_userEditingUsername || _userEditingCountry || _userEditingBirth) return;
 
         Snackbar.Remove(_editingModeSnackbar);
@@ -302,6 +302,9 @@
     public void Dispose()
     {
         AuthenticationStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+
+        if (_editingModeSnackbar != null)
+            Snackbar.Remove(_editingModeSnackbar);
     }
 
 }
