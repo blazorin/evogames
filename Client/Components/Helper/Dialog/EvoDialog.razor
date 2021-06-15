@@ -1,24 +1,26 @@
 <MudDialog>
+    <TitleContent>
+        @RenderProgress()
+
+        <MudContainer Class="mt-4"/>
+        <h6 class="mud-typography mud-typography-h6 mud-inherit-text">@ContentTitle</h6>
+    </TitleContent>
     <DialogContent>
         <MudText>@ContentText</MudText>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel" Disabled="waitingResponse">Cancel</MudButton>
-        <MudButton Color="@Color" Variant="Variant.Filled" OnClick="@(async _ => { waitingResponse = true; await SubmitEvent.Invoke(); waitingResponse = false; Submit(); })" Disabled="waitingResponse">@ButtonText</MudButton>
-        @if (waitingResponse)
-        {
-            <div style="display: block">
-                <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-7"/>
-            </div>
-        }
+        <MudButton Color="@Color" Variant="Variant.Filled" OnClick="OnConfirmButton" Disabled="waitingResponse">@ButtonText</MudButton>
     </DialogActions>
 </MudDialog>
-
 
 @code {
 
     [CascadingParameter]
     MudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public string ContentTitle { get; set; }
 
     [Parameter]
     public string ContentText { get; set; }
@@ -36,4 +38,30 @@
 
     void Submit() => MudDialog.Close(DialogResult.Ok(true));
     void Cancel() => MudDialog.Cancel();
+
+
+    private RenderFragment RenderProgress()
+    {
+        return b =>
+        {
+            b.OpenComponent<MudProgressLinear>(1);
+            b.AddAttribute(2, "Color", Color.Primary);
+            b.AddAttribute(3, "Indeterminate", true);
+            b.AddAttribute(4, "Style", "visibility: " + (waitingResponse ? "visible" : "hidden") + "; width: 599.5px; margin-left: -24px; margin-top: -16px; padding-top: 7px; border-radius: 10px");
+            b.CloseComponent();
+        };
+    }
+
+    private async Task OnConfirmButton()
+    {
+        waitingResponse = true;
+        MudDialog.ForceRender();
+
+    // render
+        await SubmitEvent.Invoke();
+
+        waitingResponse = false;
+        Submit();
+    }
+
 }
