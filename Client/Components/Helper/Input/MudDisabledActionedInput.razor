@@ -1,21 +1,23 @@
 <div class="mud-input-control mud-input-input-control">
-    <div class="mud-input mud-input-text mud-input-adorned-end mud-shrink" style="color: black">
-        <input type="text" class="mud-input-slot mud-input-root mud-input-root-text mud-input-root-adorned-end" disabled value="@Value">
-        <div class="mud-input-adornment mud-input-adornment-end">
-            <button type="button" class="mud-button-root mud-icon-button mud-ripple mud-ripple-icon mud-icon-button-edge-end" @onclick="@(async () => await EditAction.InvokeAsync())">
-                <span class="mud-icon-button-label">
-                    <svg class="mud-icon-root mud-svg-icon mud-inherit-text mud-icon-size-medium" focusable="false" viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M0 0h24v24H0z" fill="none"></path><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"></path>
-                    </svg>
-                </span>
-            </button>
+    <div class="mud-input-control-input-container">
+        <div class="mud-input mud-input-text mud-input-adorned-end mud-shrink" style="color: black">
+            <input type="text" class="mud-input-slot mud-input-root mud-input-root-text mud-input-root-adorned-end" disabled value="@Value">
+            <div class="mud-input-adornment mud-input-adornment-end">
+                <button type="button" class="mud-button-root mud-icon-button mud-ripple mud-ripple-icon mud-icon-button-edge-end" @onclick="@(async () => await EditAction.InvokeAsync())">
+                    <span class="mud-icon-button-label">
+                        <svg class="mud-icon-root mud-svg-icon mud-inherit-text mud-icon-size-medium" focusable="false" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M0 0h24v24H0z" fill="none"></path><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"></path>
+                        </svg>
+                    </span>
+                </button>
+            </div>
         </div>
+        <label class="mud-input-label mud-input-label-animated mud-input-label-text mud-input-label-inputcontrol">@Title</label>
+        @if (!string.IsNullOrEmpty(HelperText))
+        {
+            <p class="mud-input-helper-text mud-input-input-control">@HelperText</p>
+        }
     </div>
-    <label class="mud-input-label mud-input-label-animated mud-input-label-text mud-input-label-inputcontrol">@Title</label>
-    @if (!string.IsNullOrEmpty(HelperText))
-    {
-        <p class="mud-input-helper-text mud-input-input-control">@HelperText</p>
-    }
 </div>
 
 @code {
