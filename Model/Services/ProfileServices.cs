@@ -73,6 +73,22 @@ namespace Model.Services
             return await _ctx.SaveChangesAsync() != 1;
         }
 
+        public async Task<bool> UpdateEmail(string id, string email)
+        {
+            var storedProfile = await FindCrowdUser(id);
+
+            storedProfile.Email = email;
+            storedProfile.Logs.Add(new UserLog
+            {
+                Date = DateTime.Now, UserLogId = Guid.NewGuid().ToString() + Guid.NewGuid(),
+                UserLogType = UserLogType.EmailChanged
+            });
+
+            // TODO: log of previous used emails
+
+            return await _ctx.SaveChangesAsync() != 1;
+        }
+
         private async Task<User> FindCrowdUser(string id)
         {
             return await _ctx.Users
