@@ -27,7 +27,23 @@
                 <MudDisabledActionedInput Title="Username" HelperText="You can always change it" Value="@_username" EditAction="@(() => { _userEditingUsername = true; PopEditingModeSnackBar(); })"/>
             </div>
         }
-        <MudTextField T="string" Style="color: black" Label="Email" Value="_userProfile.Email" DisableUnderLine Disabled/>
+        if (_userEditingEmail)
+        {
+            <div style="width: @(52 + (_userProfile.Email.Length * 12))px">
+                <MudForm @bind-IsValid="@_emailValid">
+                    <MudTextField T="string" Label="Email" Value="@(_emailField?.Value ?? _userProfile.Email)" Immediate="true" Validation="@(new Func<string, IEnumerable<string>>(arg => ClientValidationHelper.CheckEmail(arg, _emailExists)))" ValueChanged="async _ => await _emailField.Validate()" OnKeyUp="OnEmailChanged" @ref="_emailField"/>
+                </MudForm>
+                <MudButton Color="Color.Success" OnClick="OpenEmailDialog" Disabled="@(!_emailValid || _updatingEmail || (_emailField?.Value ?? _userProfile.Email) == _userProfile.Email)">Save</MudButton>
+                <MudButton Color="Color.Error" OnClick="@(() => { _userEditingEmail = false; ClearEditingModeSnackBar(); })" Disabled="_updatingEmail">Cancel</MudButton>
+            </div>
+        }
+        else
+        {
+            <div style="width: @(52 + (_userProfile.Email.Length * 10))px">
+                <MudDisabledActionedInput Title="Email" Value="@_userProfile.Email" EditAction="@(() => { _userEditingEmail = true; PopEditingModeSnackBar(); })"/>
+            </div>
+        }
+        // <MudTextField T="string" Style="color: black" Label="Email" Value="_userProfile.Email" DisableUnderLine Disabled/>
         <MudContainer Class="mt-2"/>
         if (_userEditingBirth)
         {
@@ -72,6 +88,7 @@
     UserProfileDto _userProfile = new();
     string _username;
     MudTextField<string> _usernameField;
+    MudTextField<string> _emailField;
 
     bool _isLoading;
 
@@ -82,6 +99,11 @@
 
     bool _userEditingBirth;
     bool _userEditingCountry;
+
+    bool _userEditingEmail;
+    bool _emailValid = true;
+    bool _emailExists;
+    bool _updatingEmail;
 
     Snackbar _editingModeSnackbar;
 
@@ -98,6 +120,24 @@
             { "ContentText", $"Do you really want to change your username to {_usernameField.Value} ? This process cannot be undone." },
             { "ButtonText", "Change" },
             { "SubmitEvent", new Func<Task>(UpdateUsername) }, //hey, works good!
+            { "Color", Color.Error }
+        };
+
+    // prompt dialog
+        DialogService.Show<EvoDialog>(string.Empty, parameters, new DialogOptions { DisableBackdropClick = true });
+    }
+
+    private void OpenEmailDialog()
+    {
+        if (!_emailValid)
+            return;
+
+        var parameters = new DialogParameters
+        {
+            { "ContentTitle", "Change Email" },
+            { "ContentText", $"Do you really want to change your email to {_emailField.Value} ? This process cannot be undone." }, // add warning if Google Auth is linked
+            { "ButtonText", "Change" },
+            { "SubmitEvent", new Func<Task>(UpdateEmail) }, //hey, works good!
             { "Color", Color.Error }
         };
 
@@ -221,6 +261,21 @@
         await _usernameField.Validate();
     }
 
+    private async Task OnEmailChanged(KeyboardEventArgs _)
+    {
+        var value = _emailField.Value;
+        if (!CheckValidEmail.Validate(value))
+            return;
+
+        var response = await HttpClient.GetAsync($"account/email/{value}");
+
+        var result = await response.Content.ReadFromJsonAsync<bool>();
+
+        _emailExists = result;
+
+        await _emailField.Validate();
+    }
+
     async Task UpdateUsername()
     {
         var value = _usernameField.Value;
@@ -256,6 +311,41 @@
         Snackbar.Add("Username updated successfuly", Severity.Success);
     }
 
+    async Task UpdateEmail()
+    {
+        var value = _emailField.Value;
+
+        if (!_emailValid || _emailExists || string.IsNullOrEmpty(value))
+            return;
+
+        _updatingEmail = true;
+        StateHasChanged(); // remind Blazor to re-render, because it's a func and not an EventCallback.
+
+        var response = await HttpClient.PutAsJsonAsync("profile/email", new UpdateProfileMail(value));
+
+        if (!response.IsSuccessStatusCode)
+        {
+            ApiError error = await response.Content.ReadFromJsonAsync<ApiError>();
+            Snackbar.Add(error?.Message, Severity.Error);
+
+            _updatingEmail = false;
+            StateHasChanged(); // remind Blazor to re-render, because it's a func and not an EventCallback.
+            return;
+        }
+
+    // fire OnAuthenticationStateChanged 
+
+        _updatingEmail = false;
+        _userEditingEmail = false;
+        _userProfile.Email = value;
+
+        await Task.Delay(new Random().Next(1250, 1950));
+        ClearEditingModeSnackBar();
+
+        StateHasChanged(); // remind Blazor to re-render, because it's a func and not an EventCallback.
+        Snackbar.Add("Email updated successfuly", Severity.Success);
+    }
+
     /*
     private void ShowCloseEditingSnackBar()
     {
@@ -282,7 +372,7 @@
             config.RequireInteraction = true;
             config.Onclick = _ =>
             {
-                _userEditingUsername = _userEditingCountry = _userEditingBirth = false;
+                _userEditingUsername = _userEditingCountry = _userEditingBirth = _userEditingEmail = false;
                 ClearEditingModeSnackBar();
 
                 StateHasChanged();
@@ -293,7 +383,7 @@
     private void ClearEditingModeSnackBar()
     {
         if (_editingModeSnackbar == null) return;
-        if (_userEditingUsername || _userEditingCountry || _userEditingBirth) return;
+        if (_userEditingUsername || _userEditingCountry || _userEditingBirth || _userEditingEmail) return;
 
         Snackbar.Remove(_editingModeSnackbar);
         _editingModeSnackbar = null;
