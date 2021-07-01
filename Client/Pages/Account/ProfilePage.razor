@@ -1,0 +1,400 @@
+@page "/account/profile"
+@using Client.Components.Helper.Dialog
+@using Client.Extensions.Authentication
+@using global::Shared.Utils
+@implements IDisposable
+@inject IDialogService DialogService
+@inject HttpClient HttpClient
+@inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<MudContainer MaxWidth="MaxWidth.Large">
+    @if (!_isLoading)
+    {
+        if (_userEditingUsername)
+        {
+            <div style="width: 150px">
+                <MudForm @bind-IsValid="@_usernameValid">
+                    <MudTextField T="string" Label="Username" HelperText="You can always change it" Value="@(_usernameField?.Value ?? _username)" Immediate="true" Validation="@(new Func<string, IEnumerable<string>>(arg => ClientValidationHelper.CheckUsername(arg, _usernameExists)))" ValueChanged="async _ => await _usernameField.Validate()" OnKeyUp="OnUsernameChanged" @ref="_usernameField"/>
+                </MudForm>
+                <MudButton Color="Color.Success" OnClick="OpenUsernameDialog" Disabled="@(!_usernameValid || _updatingUsername || (_usernameField?.Value ?? _username) == _username)">Save</MudButton>
+                <MudButton Color="Color.Error" OnClick="@(() => { _userEditingUsername = false; ClearEditingModeSnackBar(); })" Disabled="_updatingUsername">Cancel</MudButton>
+            </div>
+        }
+        else
+        {
+            <div style="width: 150px">
+                <MudDisabledActionedInput Title="Username" HelperText="You can always change it" Value="@_username" EditAction="@(() => { _userEditingUsername = true; PopEditingModeSnackBar(); })"/>
+            </div>
+        }
+        if (_userEditingEmail)
+        {
+            <div style="width: @(52 + (_userProfile.Email.Length * 12))px">
+                <MudForm @bind-IsValid="@_emailValid">
+                    <MudTextField T="string" Label="Email" Value="@(_emailField?.Value ?? _userProfile.Email)" Immediate="true" Validation="@(new Func<string, IEnumerable<string>>(arg => ClientValidationHelper.CheckEmail(arg, _emailExists)))" ValueChanged="async _ => await _emailField.Validate()" OnKeyUp="OnEmailChanged" @ref="_emailField"/>
+                </MudForm>
+                <MudButton Color="Color.Success" OnClick="OpenEmailDialog" Disabled="@(!_emailValid || _updatingEmail || (_emailField?.Value ?? _userProfile.Email) == _userProfile.Email)">Save</MudButton>
+                <MudButton Color="Color.Error" OnClick="@(() => { _userEditingEmail = false; ClearEditingModeSnackBar(); })" Disabled="_updatingEmail">Cancel</MudButton>
+            </div>
+        }
+        else
+        {
+            <div style="width: @(52 + (_userProfile.Email.Length * 10))px">
+                <MudDisabledActionedInput Title="Email" Value="@_userProfile.Email" EditAction="@(() => { _userEditingEmail = true; PopEditingModeSnackBar(); })"/>
+            </div>
+        }
+        // <MudTextField T="string" Style="color: black" Label="Email" Value="_userProfile.Email" DisableUnderLine Disabled/>
+        <MudContainer Class="mt-2"/>
+        if (_userEditingBirth)
+        {
+            <div style="width: 1250px; display: flex; align-items: flex-end; margin-top: -6px">
+                <MudDatePicker DateFormat="dd/MM/yyyy" Label="Birth" HelperText="Enter your Birth Date" Validation="@(new Func<DateTime?, string>(CheckAge))" Adornment="Adornment.End" Date="@(_storedTime ?? new(DateTime.Now.Year - 18, DateTime.Now.Month, DateTime.Now.Day))" DateChanged="UpdateBirth"/>
+                <MudIconButton Style="margin-left: 12px; margin-bottom: 14px" Icon="@Icons.Filled.Close" OnClick="@(() => { _userEditingBirth = false; ClearEditingModeSnackBar(); })"></MudIconButton>
+                <MudContainer Class="mt-1"/>
+            </div>
+        }
+        else
+        {
+            if (_userProfile.Birth != null)
+            {
+                <div style="width: 220px">
+                    <MudDisabledActionedInput Title="Birth" HelperText="It won't show to other players" Value="@BirthText()" EditAction="@(() => { _userEditingBirth = true; PopEditingModeSnackBar(); })"/>
+                </div>
+            }
+            else
+            {
+                <MudButton Style="text-transform: none" Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium" OnClick="@(() => { _userEditingBirth = true; PopEditingModeSnackBar();})">
+                    Set Birth
+                </MudButton>
+            }
+        }
+
+
+        <MudContainer Class="mt-2"/>
+        <NewCountrySelector Country="@_userProfile.Country" CountryChanged="UpdateCountry" Editing="@_userEditingCountry" EditingChanged="@(s => { _userEditingCountry = s; if (s is true) PopEditingModeSnackBar(); else ClearEditingModeSnackBar(); })" EditingFromProfile="true"/>
+    }
+    else
+    {
+        <MudTextForInputSkeleton Title="Username" HasHelperText Width="150px" Height="32px"/>
+        <MudTextForInputSkeleton Title="Email" Width="187px" Height="27.2px"/>
+        <MudTextForInputSkeleton Title="Birth" HasHelperText Width="220px" Height="32px"/>
+        <MudContainer Class="mt-2"/>
+        <MudTextForInputSkeleton Title="Country" CountryInput/>
+    }
+</MudContainer>
+
+@code {
+
+    UserProfileDto _userProfile = new();
+    string _username;
+    MudTextField<string> _usernameField;
+    MudTextField<string> _emailField;
+
+    bool _isLoading;
+
+    bool _userEditingUsername;
+    bool _usernameValid = true; // field starts from valid value
+    bool _usernameExists;
+    bool _updatingUsername;
+
+    bool _userEditingBirth;
+    bool _userEditingCountry;
+
+    bool _userEditingEmail;
+    bool _emailValid = true;
+    bool _emailExists;
+    bool _updatingEmail;
+
+    Snackbar _editingModeSnackbar;
+
+    DateTime? _storedTime;
+
+    private void OpenUsernameDialog()
+    {
+        if (!_usernameValid)
+            return;
+
+        var parameters = new DialogParameters
+        {
+            { "ContentTitle", "Change Username" },
+            { "ContentText", $"Do you really want to change your username to {_usernameField.Value} ? This process cannot be undone." },
+            { "ButtonText", "Change" },
+            { "SubmitEvent", new Func<Task>(UpdateUsername) }, //hey, works good!
+            { "Color", Color.Error }
+        };
+
+    // prompt dialog
+        DialogService.Show<EvoDialog>(string.Empty, parameters, new DialogOptions { DisableBackdropClick = true });
+    }
+
+    private void OpenEmailDialog()
+    {
+        if (!_emailValid)
+            return;
+
+        var parameters = new DialogParameters
+        {
+            { "ContentTitle", "Change Email" },
+            { "ContentText", $"Do you really want to change your email to {_emailField.Value} ? This process cannot be undone." }, // add warning if Google Auth is linked
+            { "ButtonText", "Change" },
+            { "SubmitEvent", new Func<Task>(UpdateEmail) }, //hey, works good!
+            { "Color", Color.Error }
+        };
+
+    // prompt dialog
+        DialogService.Show<EvoDialog>(string.Empty, parameters, new DialogOptions { DisableBackdropClick = true });
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        _isLoading = true;
+
+    // We have the username stored, let's use it instead of fetching from API, right?
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        _username = authState.User?.Identity?.Name;
+
+
+        AuthenticationStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+
+        var response = await HttpClient.GetAsync("profile/me");
+        if (!response.IsSuccessStatusCode)
+        {
+            var apiError = await response.Content.ReadFromJsonAsync<ApiError>();
+            Snackbar.Add(apiError?.Message, Severity.Error);
+            return;
+        }
+        _userProfile = await response.Content.ReadFromJsonAsync<UserProfileDto>();
+        _storedTime = _userProfile?.Birth;
+
+        await Task.Delay(new Random().Next(1250, 1950));
+        _isLoading = false;
+    }
+
+    private async void OnAuthenticationStateChanged(Task<AuthenticationState> authStateTask)
+    {
+        var authState = await authStateTask;
+        _username = authState.User?.Identity?.Name;
+        StateHasChanged();
+    }
+
+    private static string CheckAge(DateTime? arg)
+    {
+        return arg != null && (DateTime.Compare(arg.Value.AddYears(18), DateTime.Now) == 1 || arg.Value.Year < DateTime.Now.Year - 100) ? "You need to be major of age to play" : null;
+    }
+
+    private async Task UpdateBirth(DateTime? date)
+    {
+        if (date == null)
+            return;
+
+        _storedTime = date;
+
+    // ui changes updated, and something more ... .
+
+        if (CheckAge(date) == null)
+        {
+            var response = await HttpClient.PutAsJsonAsync("profile/birth", new UpdateProfileBirth(date));
+            if (!response.IsSuccessStatusCode)
+            {
+                var apiError = await response.Content.ReadFromJsonAsync<ApiError>();
+                Snackbar.Add(apiError?.Message, Severity.Error);
+                return;
+            }
+
+            _userProfile.Birth = date;
+            _userEditingBirth = false;
+            Snackbar.Add("Birth updated successfully", Severity.Success);
+            ClearEditingModeSnackBar();
+        }
+    }
+
+    private async Task UpdateCountry(string country)
+    {
+        if (string.IsNullOrEmpty(country))
+            return;
+
+        var response = await HttpClient.PutAsJsonAsync("profile/country", new UpdateProfileCountry(country));
+        if (!response.IsSuccessStatusCode)
+        {
+            var apiError = await response.Content.ReadFromJsonAsync<ApiError>();
+            Snackbar.Add(apiError?.Message, Severity.Error);
+            return;
+        }
+
+        _userProfile.Country = country;
+        Snackbar.Add("Country updated successfully", Severity.Success);
+    }
+
+    private string BirthText()
+    {
+        if (_userProfile.Birth == null)
+    // This should not happen anyways
+            return string.Empty;
+
+        DateTime date = _userProfile.Birth.Value;
+
+        bool dayNeedsZero = date.Day.ToString().Length == 1;
+        bool monthNeedsZero = date.Month.ToString().Length == 1;
+
+        if (dayNeedsZero && monthNeedsZero)
+            return $"0{date.Day}/0{date.Month}/{date.Year}";
+        if (dayNeedsZero)
+            return $"0{date.Day}/{date.Month}/{date.Year}";
+        if (monthNeedsZero)
+            return $"{date.Day}/0{date.Month}/{date.Year}";
+
+        return $"{date.Day}/{date.Month}/{date.Year}";
+    }
+
+    private async Task OnUsernameChanged(KeyboardEventArgs _)
+    {
+        var value = _usernameField.Value;
+        if (value.Length is < 4 or > 15 || BlackList.Names.Any(name => name == value) || value == _username)
+            return;
+
+        var response = await HttpClient.GetAsync($"account/username/{value}");
+
+        var result = await response.Content.ReadFromJsonAsync<bool>();
+
+        _usernameExists = result;
+
+        await _usernameField.Validate();
+    }
+
+    private async Task OnEmailChanged(KeyboardEventArgs _)
+    {
+        var value = _emailField.Value;
+        if (!CheckValidEmail.Validate(value))
+            return;
+
+        var response = await HttpClient.GetAsync($"account/email/{value}");
+
+        var result = await response.Content.ReadFromJsonAsync<bool>();
+
+        _emailExists = result;
+
+        await _emailField.Validate();
+    }
+
+    async Task UpdateUsername()
+    {
+        var value = _usernameField.Value;
+
+        if (!_usernameValid || _usernameExists || string.IsNullOrEmpty(value))
+            return;
+
+        _updatingUsername = true;
+        StateHasChanged(); // remind Blazor to re-render, because it's a func and not an EventCallback.
+
+        var response = await HttpClient.PutAsJsonAsync("profile/username", new UpdateProfileUsername(value));
+
+        if (!response.IsSuccessStatusCode)
+        {
+            ApiError error = await response.Content.ReadFromJsonAsync<ApiError>();
+            Snackbar.Add(error?.Message, Severity.Error);
+
+            _updatingUsername = false;
+            StateHasChanged(); // remind Blazor to re-render, because it's a func and not an EventCallback.
+            return;
+        }
+
+    // fire OnAuthenticationStateChanged 
+
+        _updatingUsername = false;
+        _userEditingUsername = false;
+        _username = value;
+
+        await Task.Delay(new Random().Next(1250, 1950));
+        ClearEditingModeSnackBar();
+
+        await ((CustomAuthenticationStateProvider)AuthenticationStateProvider).UpdateUsernameAsync(value);
+        Snackbar.Add("Username updated successfuly", Severity.Success);
+    }
+
+    async Task UpdateEmail()
+    {
+        var value = _emailField.Value;
+
+        if (!_emailValid || _emailExists || string.IsNullOrEmpty(value))
+            return;
+
+        _updatingEmail = true;
+        StateHasChanged(); // remind Blazor to re-render, because it's a func and not an EventCallback.
+
+        var response = await HttpClient.PutAsJsonAsync("profile/email", new UpdateProfileMail(value));
+
+        if (!response.IsSuccessStatusCode)
+        {
+            ApiError error = await response.Content.ReadFromJsonAsync<ApiError>();
+            Snackbar.Add(error?.Message, Severity.Error);
+
+            _updatingEmail = false;
+            StateHasChanged(); // remind Blazor to re-render, because it's a func and not an EventCallback.
+            return;
+        }
+
+    // fire OnAuthenticationStateChanged 
+
+        _updatingEmail = false;
+        _userEditingEmail = false;
+        _userProfile.Email = value;
+
+        await Task.Delay(new Random().Next(1250, 1950));
+        ClearEditingModeSnackBar();
+
+        StateHasChanged(); // remind Blazor to re-render, because it's a func and not an EventCallback.
+        Snackbar.Add("Email updated successfuly", Severity.Success);
+    }
+
+    /*
+    private void ShowCloseEditingSnackBar()
+    {
+        Snackbar.Add("Exit edit mode", Severity.Normal, config =>
+        {
+            config.Onclick = sb =>
+            {
+                _userEditingBirth = false;
+                _userEditingCountry = false;
+                _userEditingUsername = false;
+
+                return Task.CompletedTask;
+            };
+        });
+    }
+    */
+
+    private void PopEditingModeSnackBar() =>
+        _editingModeSnackbar ??= Snackbar.Add("You're in Editing Mode", Severity.Normal, config =>
+        {
+            config.Action = "Exit";
+            config.ActionColor = Color.Primary;
+            config.ShowCloseIcon = false;
+            config.RequireInteraction = true;
+            config.Onclick = _ =>
+            {
+                _userEditingUsername = _userEditingCountry = _userEditingBirth = _userEditingEmail = false;
+                ClearEditingModeSnackBar();
+
+                StateHasChanged();
+                return Task.CompletedTask;
+            };
+        });
+
+    private void ClearEditingModeSnackBar()
+    {
+        if (_editingModeSnackbar == null) return;
+        if (_userEditingUsername || _userEditingCountry || _userEditingBirth || _userEditingEmail) return;
+
+        Snackbar.Remove(_editingModeSnackbar);
+        _editingModeSnackbar = null;
+    }
+
+    public void Dispose()
+    {
+        AuthenticationStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+
+        if (_editingModeSnackbar != null)
+            Snackbar.Remove(_editingModeSnackbar);
+    }
+
+}

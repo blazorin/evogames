@@ -48,6 +48,8 @@ namespace Server.Controllers
             if (User?.Identity != null && User.Identity.IsAuthenticated)
                 return Forbid();
 
+            //TODO: Recaptcha
+
             if (string.IsNullOrWhiteSpace(credentials.Email) || string.IsNullOrWhiteSpace(credentials.Password))
                 return Unauthorized(new UnauthorizedError("email_or_password_blank"));
 
@@ -91,32 +93,35 @@ namespace Server.Controllers
             if (newUser.Name.Length > 15)
                 return Unauthorized(new UnauthorizedError("username_too_big"));
 
+            // Check username regex
+            if (!newUser.Name.All(char.IsLetterOrDigit))
+                return Unauthorized(new UnauthorizedError("username_symbols"));
+
+            // Check if username is blacklisted
+            if (BlackList.Names.Any(name => name == newUser.Name))
+                return Unauthorized(new UnauthorizedError("username_blacklisted"));
+
+            // Check username if registered
+            var userRegistered = await _userServices.UsernameExistsAsync(newUser.Name);
+            if (userRegistered)
+                return Unauthorized(new UnauthorizedError("username_already_exists"));
+
             if (newUser.Email.Length > 100 || !CheckValidEmail.Validate(newUser.Email))
                 return Unauthorized(new UnauthorizedError("email_invalid"));
 
             // Check email if registered
             var emailRegistered = await _userServices.EmailExistsAsync(newUser.Email);
             if (emailRegistered)
-                return Unauthorized(new UnauthorizedError("email_already_used"));
-
-            // Check username regex
-            if (!newUser.Name.All(char.IsLetterOrDigit))
-                return Unauthorized(new UnauthorizedError("username_symbols"));
-
-            // Check username if registered
-            var userRegistered = await _userServices.UsernameExistsAsync(newUser.Name);
-            if (userRegistered)
-                return Unauthorized(new UnauthorizedError("username_already_used"));
+                return Unauthorized(new UnauthorizedError("email_already_exists"));
 
             // Check if +18
-            var notMajorAje = DateTime.Compare(newUser.Birth.AddYears(18), DateTime.Now) == 1;
+            if (newUser.Birth == null)
+                return Unauthorized(new UnauthorizedError("birth_empty"));
 
-            if (newUser.Birth == DateTime.MinValue || newUser.Birth.Year < DateTime.Now.Year - 100 || notMajorAje)
+            var notMajorAje = DateTime.Compare(newUser.Birth.Value.AddYears(18), DateTime.Now) == 1;
+
+            if (newUser.Birth.Value.Year < DateTime.Now.Year - 100 || notMajorAje)
                 return Unauthorized(new UnauthorizedError("not_major_age"));
-
-            // Check if username is blacklisted
-            if (BlackList.Names.Any(name => name == newUser.Name))
-                return Unauthorized(new UnauthorizedError("username_blacklisted"));
 
             // Check if country is allowed
             if (!Enum.IsDefined(typeof(BlackList.Countries), newUser.Country))
@@ -149,13 +154,16 @@ namespace Server.Controllers
         [HttpPost("oauth/google")]
         public async Task<IActionResult> GoogleOauth(GoogleLoginRequest request)
         {
+            if (User?.Identity != null && User.Identity.IsAuthenticated)
+                return Forbid();
+
             GoogleJsonWebSignature.Payload payload;
             try
             {
                 payload = await GoogleJsonWebSignature.ValidateAsync(request.IdToken,
                     new GoogleJsonWebSignature.ValidationSettings
                     {
-                        Audience = new[] {_configuration["Authentication:Google:ClientId"]}
+                        Audience = new[] { _configuration["Authentication:Google:ClientId"] }
                     });
 
                 // It is important to add your ClientId as an audience in order to make sure
@@ -170,10 +178,12 @@ namespace Server.Controllers
             {
                 Email = payload.Email,
                 Username = payload.Email.Substring(0, payload.Email.IndexOf("@", StringComparison.Ordinal)
-                ).Replace(".", string.Empty).Replace("-", string.Empty)
+                ).Replace(".", string.Empty).Replace("-", string.Empty) // in case its a registration
             };
 
             var user = await _userServices.HandleOauthAuthenticationAsync(credentials, OauthType.Google);
+            if (user == null)
+                return Unauthorized(new UnauthorizedError("google_oauth_error"));
 
             var userData = HandleGenerateToken(user);
             return Ok(userData);

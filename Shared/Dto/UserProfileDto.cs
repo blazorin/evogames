@@ -10,8 +10,8 @@ namespace Shared.Dto
 
         public string Email { get; set; }
 
-        public DateTime Birth { get; set; }
-        
+        public DateTime? Birth { get; set; }
+
         public string Country { get; set; }
     }
 }

@@ -20,7 +20,7 @@ namespace Model.Data
 
         public string PasswordHashed { get; set; }
 
-        public DateTime Birth { get; set; }
+        public DateTime? Birth { get; set; }
 
         public DateTime CreationDate { get; set; }
         public DateTime LastLogin { get; set; }

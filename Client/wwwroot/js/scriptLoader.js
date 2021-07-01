@@ -13,7 +13,6 @@ window.loadScript = function (scriptPath) {
         // create JS library script element
         var script = document.createElement("script");
         script.src = scriptPath;
-        script.type = "text/javascript";
         console.log(scriptPath + " created");
 
         // flag as loading/loaded
@@ -51,7 +50,6 @@ window.loadScriptDefer = function (scriptPath) {
         // create JS library script element
         var script = document.createElement("script");
         script.src = scriptPath;
-        script.type = "text/javascript";
         script.async = true;
         script.defer = true;
         console.log(scriptPath + " created");
@@ -74,6 +72,17 @@ window.loadScriptDefer = function (scriptPath) {
         // scripts will load at end of body
         document["body"].appendChild(script);
     });
+}
+
+window.reloadJsDefer = function (scriptPath, reload) {
+    if (loaded[scriptPath]) {
+        scriptPath = $('script[src$="' + scriptPath + '"]').attr("src");
+        $('script[src$="' + scriptPath + '"]').remove();
+        loaded[scriptPath] = false;
+    }
+
+    if (reload)
+    loadScriptDefer(scriptPath);
 }
 
 // store list of what scripts we've loaded

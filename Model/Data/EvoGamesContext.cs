@@ -23,6 +23,7 @@ namespace Model.Data
             model.Entity<User>().HasIndex(u => u.Email).IsUnique(true);
             model.Entity<Bet>().HasIndex(b => b.Date).IsUnique(false);
             model.Entity<Transaction>().HasIndex(t => t.Date).IsUnique(false);
+            model.Entity<UserLog>().HasIndex(l => l.Date).IsUnique(false);
         }
     }
 }

@@ -16,6 +16,8 @@ namespace Shared.Enums
         EmailChanged,
         UsernameChanged,
         PasswordChanged,
+        BirthChanged,
+        CountryChanged,
         ChatMessage,
         Notification,
         Kyc

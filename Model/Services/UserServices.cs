@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
+using AutoMapper.QueryableExtensions;
 using Microsoft.EntityFrameworkCore;
 using Model.Data;
 using Model.Enums;
@@ -10,6 +11,7 @@ using Model.Utils;
 using Shared;
 using Shared.Dto;
 using Shared.Enums;
+using Shared.Utils;
 
 namespace Model.Services
 {
@@ -28,7 +30,7 @@ namespace Model.Services
         {
             User storedUser;
 
-            if (logType == UserLogType.GoogleLogin || logType == UserLogType.DiscordLogin)
+            if (logType is UserLogType.GoogleLogin or UserLogType.DiscordLogin)
             {
                 storedUser = await _ctx.Users
                     .Where(user => user.Email == credentials.Email)
@@ -40,7 +42,9 @@ namespace Model.Services
             {
                 var passwordHashed = HashingHelper.ComputeSha256Hash(credentials.Password);
                 storedUser = await _ctx.Users
-                    .Where(user => user.Email == credentials.Email && user.PasswordHashed == passwordHashed)
+                    .Where(user =>
+                        user.Email == credentials.Email && !string.IsNullOrEmpty(user.PasswordHashed) &&
+                        user.PasswordHashed == passwordHashed)
                     .Include(user => user.Logs)
                     .Include(user => user.Perms)
                     .FirstOrDefaultAsync();
@@ -105,7 +109,8 @@ namespace Model.Services
                 var loginLogType = oauthType switch
                 {
                     OauthType.Google => UserLogType.GoogleLogin,
-                    OauthType.Discord => UserLogType.DiscordLogin
+                    OauthType.Discord => UserLogType.DiscordLogin,
+                    _ => throw new ArgumentOutOfRangeException(nameof(oauthType), oauthType, null)
                 };
 
                 return await GetUserByAuthenticationAsync(userCredentials, loginLogType);
@@ -114,8 +119,12 @@ namespace Model.Services
             string username = oauthCredentials.Username.Length switch
             {
                 > 15 => oauthCredentials.Username.Substring(0, 15),
+                < 4 => oauthCredentials.Username + HashingHelper.GenerateRandomNo(),
                 _ => oauthCredentials.Username
             };
+
+            if (BlackList.Names.Any(word => username.Contains(word)))
+                username = "goofy";
 
             string usernameBase = username;
             int count = 0;
@@ -125,14 +134,15 @@ namespace Model.Services
                            HashingHelper.GenerateRandomNo();
                 count++;
 
+
+                if (count < 5000) continue;
                 // I hope this won't happen :)
-                if (count >= 5000)
-                {
-                    username = "goofy" + HashingHelper.GenerateRandomNo() + HashingHelper.GenerateRandomNo();
-                    // maybe add alert here, in the future
-                    break;
-                }
+
+                username = "goofy" + HashingHelper.GenerateRandomNo() + HashingHelper.GenerateRandomNo();
+                // maybe add alert here, in the future
+                break;
             }
+
 
             var newUser = new NewUserDto
             {
@@ -143,7 +153,8 @@ namespace Model.Services
             var registerLogType = oauthType switch
             {
                 OauthType.Google => UserLogType.GoogleSignUp,
-                OauthType.Discord => UserLogType.DiscordSignUp
+                OauthType.Discord => UserLogType.DiscordSignUp,
+                _ => throw new ArgumentOutOfRangeException(nameof(oauthType), oauthType, null)
             };
 
             return await AddUserAsync(newUser, registerLogType);

@@ -17,6 +17,7 @@ namespace Shared.ApiErrors
             {
                 401 => "unauthorized",
                 403 => "no_permission",
+                404 => "not_found",
                 _ => Message
             };
         }

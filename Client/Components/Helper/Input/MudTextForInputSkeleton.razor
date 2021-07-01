@@ -1,0 +1,40 @@
+<div class="mud-input-control mud-input-input-control">
+    <div class="mud-input-control-input-container">
+        <div class="mud-input mud-input-text mud-input-adorned-end mud-shrink" style="color: black; display: block">
+            @if (!CountryInput)
+            {
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Animation="Animation.Wave" Width="@Width" Height="@Height"/>
+
+                if (HasHelperText)
+                {
+                    <MudContainer Class="mt-1"/>
+                    <MudSkeleton SkeletonType="SkeletonType.Rectangle" Animation="Animation.Wave" Width="150px" Height="19px"/>
+                }
+            }
+            else
+            {
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Animation="Animation.Wave" Width="250px" Height="56px"/>
+            }
+        </div>
+        <label class="mud-input-label mud-input-label-animated mud-input-label-text mud-input-label-inputcontrol">@Title</label>
+    </div>
+</div>
+
+@code {
+
+    [Parameter]
+    public string Title { get; set; }
+
+    [Parameter]
+    public string Width { get; set; }
+
+    [Parameter]
+    public string Height { get; set; }
+
+    [Parameter]
+    public bool HasHelperText { get; set; }
+
+    [Parameter]
+    public bool CountryInput { get; set; }
+
+}

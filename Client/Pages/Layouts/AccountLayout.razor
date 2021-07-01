@@ -1,0 +1,79 @@
+@inherits LayoutComponentBase
+@layout MainLayout
+@inject NavigationManager NavigationManager
+@implements IDisposable
+
+<MudContainer MaxWidth="MaxWidth.Large">
+    <MudTabs Elevation="3" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6" @bind-ActivePanelIndex="@_activeIndex">
+
+        <MudTabPanel Text="Profile" OnClick="@(() => NavigationManager.NavigateTo("account/profile"))">
+            @Body
+        </MudTabPanel>
+
+        <MudTabPanel Text="Bets" OnClick="@(() => NavigationManager.NavigateTo("account/bets"))">
+            @Body
+        </MudTabPanel>
+
+        <MudTabPanel Text="Transactions" OnClick="@(() => NavigationManager.NavigateTo("account/transactions"))">
+            @Body
+        </MudTabPanel>
+
+        <MudTabPanel Text="VIP" OnClick="@(() => NavigationManager.NavigateTo("account/vip"))">
+            @Body
+        </MudTabPanel>
+        <MudTabPanel Text="Refer" OnClick="@(() => NavigationManager.NavigateTo("account/refer"))">
+            @Body
+        </MudTabPanel>
+    </MudTabs>
+</MudContainer>
+
+@_activeIndex
+
+
+@code {
+
+    int _activeIndex;
+
+    private void ActivateAndNavigate(object obj, LocationChangedEventArgs args)
+    {
+        string loc = args.Location;
+
+        ActivateTab(loc);
+        StateHasChanged();
+    }
+
+    private void ActivateTab(string loc)
+    {
+        if (loc.EndsWith("profile"))
+            _activeIndex = 0;
+        else if (loc.EndsWith("bets"))
+            _activeIndex = 1;
+        else if (loc.EndsWith("transactions"))
+            _activeIndex = 2;
+        else if (loc.EndsWith("vip"))
+            _activeIndex = 3;
+        else if (loc.EndsWith("refer"))
+            _activeIndex = 4;
+    }
+
+    protected override void OnInitialized()
+    {
+        NavigationManager.LocationChanged += ActivateAndNavigate;
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (!firstRender) return;
+
+    // Only executed on reload and when user is coming from other layout
+
+        ActivateTab(NavigationManager.Uri);
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= ActivateAndNavigate;
+    }
+
+}

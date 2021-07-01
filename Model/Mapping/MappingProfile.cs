@@ -12,6 +12,7 @@ namespace Model.Mapping
         public MappingProfile()
         {
             // User Mapping
+            CreateMap<User, UserProfileDto>();
             CreateMap<User, UserDto>();
             CreateMap<User, AdminUserDto>();
             CreateMap<NewUserDto, User>()

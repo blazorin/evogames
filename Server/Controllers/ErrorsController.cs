@@ -1,4 +1,5 @@
 using System.Net;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Shared.ApiErrors;
 
@@ -9,12 +10,12 @@ namespace Server.Controllers
     public class ErrorsController : ControllerBase
     {
         [Route("{code}")]
-        public IActionResult Error(int code)
+        public Task<ObjectResult> Error(int code)
         {
-            HttpStatusCode parsedCode = (HttpStatusCode) code;
+            HttpStatusCode parsedCode = (HttpStatusCode)code;
             ApiError error = new ApiError(code, parsedCode.ToString());
 
-            return new ObjectResult(error);
+            return Task.FromResult(new ObjectResult(error));
         }
     }
 }
