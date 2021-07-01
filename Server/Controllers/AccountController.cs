@@ -178,7 +178,7 @@ namespace Server.Controllers
             {
                 Email = payload.Email,
                 Username = payload.Email.Substring(0, payload.Email.IndexOf("@", StringComparison.Ordinal)
-                ).Replace(".", string.Empty).Replace("-", string.Empty)
+                ).Replace(".", string.Empty).Replace("-", string.Empty) // in case its a registration
             };
 
             var user = await _userServices.HandleOauthAuthenticationAsync(credentials, OauthType.Google);
