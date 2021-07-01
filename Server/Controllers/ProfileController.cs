@@ -64,7 +64,7 @@ namespace Server.Controllers
         [HttpPut("country")]
         public async Task<IActionResult> UpdateCountry(UpdateProfileCountry newCountry)
         {
-            if (string.IsNullOrEmpty(newCountry.Country))
+            if (string.IsNullOrWhiteSpace(newCountry.Country))
                 return Conflict(new ConflictError("country_empty"));
 
             if (!Enum.IsDefined(typeof(BlackList.Countries), newCountry.Country))
@@ -101,10 +101,32 @@ namespace Server.Controllers
                 return Conflict(new ConflictError("username_already_exists"));
 
             var userId = User.GetId();
+            // var dummy = HttpContext.Session.Id
             var result = await _profileServices.UpdateUsername(userId, newUsername.Username);
 
             if (result == false)
                 return Conflict(new ConflictError("username_update_error"));
+
+            return Ok();
+        }
+
+        [HttpPut("email")]
+        public async Task<IActionResult> UpdateEmail(UpdateProfileMail newMail)
+        {
+            if (string.IsNullOrEmpty(newMail.Email) || newMail.Email.Length > 100 ||
+                !CheckValidEmail.Validate(newMail.Email))
+                return Conflict(new ConflictError("email_invalid"));
+
+            // Check email if registered // so sleepy, did not notice :/
+            var emailRegistered = await _userServices.EmailExistsAsync(newMail.Email);
+            if (emailRegistered)
+                return Conflict(new ConflictError("email_already_exists"));
+
+            var userId = User.GetId();
+            var result = await _profileServices.UpdateEmail(userId, newMail.Email);
+
+            if (result == false)
+                return Conflict(new ConflictError("email_update_error"));
 
             return Ok();
         }
