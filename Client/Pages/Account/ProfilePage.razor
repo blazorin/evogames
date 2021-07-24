@@ -29,7 +29,7 @@
         }
         if (_userEditingEmail)
         {
-            <div style="width: @(52 + (_userProfile.Email.Length * 12))px">
+            <div style="width: @(50 + (_userProfile.Email.Length * 9))px">
                 <MudForm @bind-IsValid="@_emailValid">
                     <MudTextField T="string" Label="Email" Value="@(_emailField?.Value ?? _userProfile.Email)" Immediate="true" Validation="@(new Func<string, IEnumerable<string>>(arg => ClientValidationHelper.CheckEmail(arg, _emailExists)))" ValueChanged="async _ => await _emailField.Validate()" OnKeyUp="OnEmailChanged" @ref="_emailField"/>
                 </MudForm>
@@ -39,7 +39,7 @@
         }
         else
         {
-            <div style="width: @(52 + (_userProfile.Email.Length * 10))px">
+            <div style="width: @(50 + (_userProfile.Email.Length * 9))px">
                 <MudDisabledActionedInput Title="Email" Value="@_userProfile.Email" EditAction="@(() => { _userEditingEmail = true; PopEditingModeSnackBar(); })"/>
             </div>
         }
