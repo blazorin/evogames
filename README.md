@@ -1,6 +1,5 @@
 # evogames
-[EVO.Games](https://evo.games) A Crypto Gambling Project
+Blazor project, implements MudBlazor library and tons of other stuff good to checkout.
+Its not a finished project, just a scheme.
 
-[Developer site](https://dev.evo.games)
-
-Non-disclosure agreement has been accepted to enter into this section of the proyect. Be careful.
+Sharing the code :)
